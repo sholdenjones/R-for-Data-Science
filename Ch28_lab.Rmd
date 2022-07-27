@@ -1,0 +1,172 @@
+---
+title: "Graphics for communication"
+output: html_notebook
+---
+  
+```{r}
+library(tidyverse)
+#install.packages("viridis")
+library(viridis) #You'll probably need to install this
+#install.packages("ggrepel")
+library(ggrepel)
+```
+
+
+```{r}
+#run this stuff for section 28.4 (Scales)
+df <- tibble(
+  x = rnorm(10000),
+  y = rnorm(10000)
+)
+ggplot(df, aes(x, y)) +
+  geom_hex() +
+  coord_fixed()
+
+ggplot(df, aes(x, y)) +
+  geom_hex() +
+  viridis::scale_fill_viridis() +
+  coord_fixed()
+```
+
+# 28.2 Label!
+########################################################################
+##https://r4ds.had.co.nz/graphics-for-communication.html#exercises-74 ##
+########################################################################
+
+```{r}
+best_in_class <- mpg %>%
+  group_by(class) %>%
+  filter(row_number(desc(hwy)) == 1)
+
+ggplot(mpg, aes(displ, hwy)) +
+  geom_point(aes(colour = class)) +
+  geom_text(aes(label = model), data = best_in_class)
+
+# can nudge labels within geom_label so they don't overlap
+ggplot(mpg, aes(displ, hwy)) +
+  geom_point(aes(colour = class)) +
+  geom_label(aes(label = model), data = best_in_class, nudge_y = 2, alpha = 0.5)
+
+# but still will have overlap if labels are for same point. So can use ggrepel package which says don't make any labels overlap! useful
+
+ggplot(mpg, aes(displ, hwy)) +
+  geom_point(aes(colour = class)) +
+  geom_point(size = 3, shape = 1, data = best_in_class) +
+  ggrepel::geom_label_repel(aes(label = model), data = best_in_class)
+```
+
+```{r}
+label <- mpg %>%
+  summarise(
+    displ = max(displ),
+    hwy = max(hwy),
+    label = "Increasing engine size is \nrelated to decreasing fuel economy."
+  )
+
+ggplot(mpg, aes(displ, hwy)) +
+  geom_point() +
+  geom_text(aes(label = label), data = label, vjust = "top", hjust = "right")
+```
+
+```{r}
+label <- tibble(
+  displ = Inf,
+  hwy = Inf,
+  label = "Increasing engine size is \nrelated to decreasing fuel economy."
+)
+
+ggplot(mpg, aes(displ, hwy)) +
+  geom_point() +
+  geom_text(aes(label = label), data = label, vjust = "top", hjust = "right")
+```
+
+
+1. Create one plot on the fuel economy data (`mpg`) with customised `title`, `subtitle`, `caption`, `x`, `y`, and `colour` labels.
+
+```{r}
+ggplot(mpg, aes(cty, hwy, colour = class)) +
+  geom_point() +
+  labs(x = "City Miles per Gallon", y = "Highway Miles per Gallon", colour = "Car Class",
+       title = "Car Stuff", subtitle = "City and highway mileage are closely related", 
+       caption = "Who would've thought!") 
+```
+
+2. The `geom_smooth()` is somewhat misleading because the `hwy` for large engines is skewed upwards due to the inclusion of lightweight sports cars with big engines. Use your modelling tools to fit and display a better model (hint use a linear model (`lm`) in geom_smooth).
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) + geom_point() + geom_smooth(method = 'lm', se = FALSE) + labs(x = "Engine Displacement", y = "Highway Miles per Gallon")
+```
+
+3. Take an exploratory graphic that you’ve created in the last month, and add informative titles to make it easier for others to understand.
+**SKIP**
+  
+#######################################################################
+##https://r4ds.had.co.nz/graphics-for-communication.html#exercises-75##
+#######################################################################
+
+# 28.3 Annotations
+
+**This section is optional. Take a look if you think annotating plots will be useful for you.**
+
+1. Use `geom_text()` with infinite positions to place text at the four corners of the plot.
+
+2. Read the documentation for `annotate()`. How can you use it to add a text label to a plot without having to create a tibble?
+  
+3. How do labels with `geom_text()` interact with faceting? How can you add a label to a single facet? How can you put a different label in each facet? (Hint: think about the underlying data.)
+
+4. What arguments to `geom_label()` control the appearance of the background box?
+  
+5. What are the four arguments to `arrow()`? How do they work? Create a series of plots that demonstrate the most important options.
+
+
+
+#######################################################################
+##https://r4ds.had.co.nz/graphics-for-communication.html#exercises-76##
+#######################################################################
+
+28.4 Scales
+
+1. Why doesn’t the following code override the default color scale?
+  
+```{r}
+ggplot(df, aes(x, y)) +
+  geom_hex() +
+  scale_colour_gradient(low = "white", high = "red") +
+  coord_fixed()
+```
+
+2. What is the first argument to every scale? How does it compare to `labs()`?
+  
+3. Change the display of the `presidential` terms by doing one or more of the below modifications:
+
+  
+- Combining the two variants shown above.
+- Improving the display of the y axis.
+- Labelling each term with the name of the president.
+- Adding informative plot labels.
+- Placing breaks every 4 years (this is trickier than it seems!).
+
+
+4. Use override.aes to make the legend on the following plot easier to see.
+
+```{r}
+ggplot(diamonds, aes(carat, price)) +
+  geom_point(aes(colour = cut), alpha = 1/20)
+```
+
+
+28.6-7 Themes and Saving
+
+1. Modify the above the plot below by testing the different built-in themes (https://d33wubrfki0l68.cloudfront.net/6be25cfb939e69d72df9fbc68e7a0334e1febefe/10e92/images/visualization-themes.png). You can also install and mess around with  the `ggthemes` package  (https://github.com/jrnold/ggthemes)
+
+```{r}
+ggplot(diamonds, aes(carat, price)) +
+  geom_point(aes(colour = cut), alpha = 1/20)
+```
+
+2. Save your above plot using a width of 6 inches (`fig.width`) and a figure aspect (`fig.asp`) of 0.618.
+
+```{r, fig.width=6, fig.asp=0.618}
+ggplot(diamonds, aes(carat, price)) +
+  geom_point(aes(colour = cut), alpha = 1/20)
+```
