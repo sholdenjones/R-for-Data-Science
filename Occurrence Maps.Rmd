@@ -1,0 +1,113 @@
+---
+title: "Occurrence Maps"
+output: html_document
+---
+
+```{r}
+# install.packages("maptools")
+# install.packages("ggplot2")
+install.packages("sp") # problem child here
+# install.packages("rnaturalearth")
+# install.packages("rgdal")
+# install.packages("ggmap")
+
+library("maptools")
+library("ggplot2")
+library("sp") # error here. triggered a fatal error! session aborted. never seen that before
+library("rnaturalearth") # error here. oh no!
+library("rgdal") # good
+library("ggmap") # good. strange!
+
+
+```
+
+# Making maps with R! with Dr. Laura Jimenez Jimenez
+
+R has functionality of traditional GIS packages (such as ArcGIS and QGIS)
+R is great tool for geospatial data analysis
+many ways to handle geographic data in R, lots of packages available
+R enables a reproducible workflow
+
+# 2 steps to build a map
+
+1. find and load the data layers
+need to find region boundaries and all the data layers that you want to include in your map
+these data layers usually stored in shapefiles, geoJSON files, TIFF files, raster files
+these layers are geospatial objects that have specific features so you will need special R packages to load and manipulate data
+
+2. manipulate and plot
+once geo-data are loaded in R, you acn manipulate and plot the different layers with functions included in packages such as sp or ggplot2
+
+# where do I get spatial data from
+spatial data is bulky
+geodatabases have capacity and capability to store virtually all types of geographic datasets. a lot are open-access
+ESRI, USGS, HI statewide GIS, IUCN Red List, Global Biodiversity Information Facility (GBIF) - check this out!, WorldClim - free climate data for ecological modeling and GIS
+
+Geocomputation with R, pacakge vignettes: dismo, terra, sp, rgdal
+
+r-graph-gallery.com
+r-spatial.org
+geocompr.robinlovelace.net
+rspatial.org/terra
+rspatialdata.github
+rstudio.github.io/leaflet
+
+esri for GIS concepts
+
+```{r}
+spp.pnts <- read.csv("species_occurrences_GBIF.csv", header = T)
+dim(spp.pnts) # give dimensions
+head(spp.pnts) # look at the first few rows
+```
+identify differen species in dataset
+```{r}
+spp <- factor(spp.pnts$SpeciesName) # make species name a factor, call it spp
+(spnames <- levels(spp)) # we have 9 different species
+table(spp) # how many records of each species
+```
+
+plot the map and the occurrence points on top using long and lat
+```{r}
+data("wrld_simpl", package = "maptools") # load baseline map from package maptools
+
+plot(wrld_simpl) # plot the map
+points(spp.pnts$longitude, spp.pnts$latitude, pch = 20) # put points right on map, need to run current chunk as one
+```
+using different colors to identify species
+```{r}
+plot(wrld_simpl) # plot the map
+points(spp.pnts$longitude, spp.pnts$latitude, pch = 20, col =spp) # put points right on map, col by spp (species)
+```
+try with a different palette
+```{r}
+palette(hcl.colors(length(spnames), "viridis")) # change palette - would need to change back if want to
+  # palette("default") # to get default palette back
+plot(wrld_simpl)
+points(spp.pnts$longitude, spp.pnts$latitude, pch = 20, col =spp)
+```
+changing background colors
+```{r}
+plot(wrld_simpl, col = 'wheat1', bg = 'lightcyan1') # can change color of background map too
+points(spp.pnts$longitude, spp.pnts$latitude, pch = 20, col =spp)
+legend("bottomleft", legend=spnames, bty = "n", pch = 20, col =1:length(spnames))
+```
+above map looks good but lets remove antarctica cause no need
+
+```{r}
+#raster::extent(wrld_simpl) # no package called raster darn
+plot(wrld_simpl, col = 'wheat1', bg = 'lightcyan1', ylim=c(-20, 80))
+points(spp.pnts$longitude, spp.pnts$latitude, pch = 20, col =spp)
+legend("bottomleft", legend=spnames, bty = "n", pch = 20, col =1:length(spnames))
+```
+
+png(filename = "global-map-1.png", width = 30, height = 15, units = 'cm', res = 300, pointsize = 10)
+
+can make a map for a subset of species - just one here
+```{r}
+spnames[7]
+sp.data <- subset(spp.pnts, spp.pnts$SpeciesName==spnames[7])
+range(sp.data$longitude) # what is the range of the longitude and latitude? so can zoom the map into these points
+range(sp.data$latitude)
+```
+
+
