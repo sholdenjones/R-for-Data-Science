@@ -99,41 +99,39 @@ idk <- filter(flights, is.na(dep_time))
 
 
 # Section 5.3
-
 https://r4ds.had.co.nz/transform.html#exercises-9  
 
 Here we will be sorting datasets using the `arrange` function.
 # arrange changes the order of rows
 1. How could you use `arrange()` to sort all missing values of departure time to the start? (Hint: use `desc(is.na())` to put NA's first).
 ```{r}
-arrange(flights, desc(is.na(dep_time)))
+arrange(flights, desc(is.na(dep_time)), dep_time) #1st sort by dep_time with NAs first - b/c asking true or false is dep_time NA? so False will come before True!, then sort by dep_time actual values - super cool!
 ```
 
 2. Sort flights to find the most delayed flights. Which flight left the earliest out of all flights?
-# earliest flight was #1545 EWR to IAH
+# most delayed flight was HA 51 from JFK to HNL - ooph!
+# earliest departure was flight B6 97
 ```{r}
-delayfirst <- arrange(flights, desc(arr_delay))
+arrange(flights, desc(arr_delay))
 
-# earliest flight will be earliest departure on jan 1st
-first <- arrange(flights, year, month, day, dep_time)
-    # could also do this by time_hour column
+# earliest flight will have lowest dep_delay - so arrange by this
+arrange(flights, dep_delay)
 ```
-
 
 3. Sort flights to find the fastest (highest speed) flights. Which flight is shortest?
 # there was one that was only 1hr 6 minutes - missing some other data tho
 ```{r}
-
-fast <- arrange(flights, hour, minute)
+arrange(flights, desc(distance / air_time))
 ```
 
 4. Which flights travelled the farthest? How many miles was that trip? Which travelled the shortest? Do you think the passengers of this shortest flight were planning on this destination?
-```{r}
-far <- arrange(flights, desc(distance))
-# all the farthest ones are JFK to HNL
-
+# all the farthest ones are JFK to HNL - 4983 miles
 # the shortest one was from Newark to JFK
 # probably not planned! faster to drive this distance
+```{r}
+arrange(flights, desc(distance))
+
+arrange(flights, distance)
 ```
 
 
