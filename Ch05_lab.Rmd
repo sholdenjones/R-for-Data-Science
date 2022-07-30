@@ -68,16 +68,34 @@ summer_time <- filter(flights, month %in% c(7,8,9)) # could also use | here
 ```{r}
 arr_two_dep_ontime <- filter(flights, arr_delay > 120 | dep_delay <= 0)
 ``` 
+ 
   f. Were delayed by at least an hour, but made up over 30 minutes in flight
 ```{r}
-##SKIP##
-#hour_delay <- fliter(flights, arr_delay) no work
-
+speedy <- filter(flights, dep_delay >= 60 | arr_delay <= dep_delay - 30)
 ```
 
-
   g. Departed between midnight and 6am (inclusive)
-  **SKIP**
+```{r}
+red_eye <- filter(flights, dep_time <= 360 | dep_time == 2400)
+```
+
+2. Another useful dplyr filtering helper is between(). What does it do? Can you use it to simplify the code needed to answer the previous challenges?
+# between() finds values between max and min values
+```{r}
+summer_time <- filter(flights, between(month, 7, 9))
+```
+
+3. How many flights have a missing dep_time? What other variables are missing? What might these rows represent?
+# 8255 flights missing dep_time, seems like these were cancelled b/c other values are also missing
+```{r}
+idk <- filter(flights, is.na(dep_time))
+```
+
+4. Why is NA ^ 0 not missing? Why is NA | TRUE not missing? Why is FALSE & NA not missing? Can you figure out the general rule? (NA * 0 is a tricky counterexample!)
+# NA ^ 0 = 1 b/c all numbers ^ 0 =1
+# "NA | TRUE is TRUE because anything or TRUE is TRUE"
+# "The value of NA & FALSE is FALSE because anything and FALSE is always FALSE"
+# "b/c some possibilities are undefined, idk too mathy!
 
 
 # Section 5.3
