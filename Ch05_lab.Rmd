@@ -59,7 +59,6 @@ big_three <- filter(flights, carrier == 'UA' | carrier == 'AA' | carrier == 'DL'
 big_three <- filter(flights, carrier %in% c("AA", "DL", "UA"))
 ```
   
-  
   d. Departed in summer (July, August, and September)
 ```{r}
 summer_time <- filter(flights, month %in% c(7,8,9)) # could also use | here
