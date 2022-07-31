@@ -8,7 +8,7 @@ editor_options:
 
 ```{r}
 #install.packages("nycflights13")
-install.packages("Lahman") # for the baseball example
+#install.packages("Lahman") # for the baseball example
 library(tidyverse) #loads the tidyverse packages
 library(nycflights13) #you will probably need to install this package as well
 library(Lahman)
@@ -136,25 +136,24 @@ arrange(flights, distance)
 
 
 # 5.4
-
 Here we will be using the `select` command to extract columns from a dataset.
-
 https://r4ds.had.co.nz/transform.html#exercises-10
+
+use rename() to rename variables, better than select() b/c it holds onto all variables that aren't explicity called
+
+can do select() with everything to move selected variables up to the start of a df
+select(flights, time_hour, air_time, everything())
 
 1. Select `dep_time`, `dep_delay`, `arr_time`, and `arr_delay` from `flights`.
 ```{r}
-subset <- select(flights, dep_time, dep_delay, sched_arr_time, arr_delay)
+select(flights, dep_time, dep_delay, sched_arr_time, arr_delay)
 ```
-
 
 2. What happens if you include the name of a variable multiple times in a select() call?
 ```{r}
 subset <- select(flights, dep_time, dep_time, dep_delay, sched_arr_time, arr_delay)
 # doesnt seem to make a difference?
 ```
-
-# can use everything() helper, to put only variables of interest (specified in select call) at the front of the df
-
 
 3. What does the `any_of()` function do? Why might it be helpful in conjunction with this vector below?
 # any_of() is a selection helper - doesn't check for missing variables. especially useful for negative selections when like to make sure a variable is removed
@@ -165,55 +164,95 @@ subset <- select(flights, any_of(vars)) # says keep only the variables vars in f
 ```
 
 4. Does the result of running the following code surprise you? How do the select helpers deal with case by default? How can you change that default?
-# I am surprised! they don't care about case!
-# can use ignore.case=FALSE to change this if need
+
+I am surprised! they don't care about case!
+can use ignore.case=FALSE to change this if need
 ```{r}
 select(flights, contains("TIME"))
 ```
 
-
 # Section 5.5
 
 Modifying and adding columns with `mutate`.
-
 https://r4ds.had.co.nz/transform.html#exercises-11
+
+if you just want to keep the new variables can use transmute()
 
 1. Currently `dep_time` and `sched_dep_time` are convenient to look at, but hard to compute with because they’re not really continuous numbers. Convert them to a more convenient representation of number of minutes since midnight. (*Hint: `dep_time%/%100` will extract the number of hours and `dep_time%%60` will return the number of minutes*)
 ```{r}
 # modulus - stuff from Jake
-flights <- mutate(flights, dep_time=dep_time%/%100*60 + dep_time%%100, arr_time=arr_time%/%100*60 + arr_time%%100)
+flights_new <- mutate(flights, dep_time=dep_time%/%100*60 + dep_time%%100, arr_time=arr_time%/%100*60 + arr_time%%100)
 ```
 
 2. Compare `air_time` with `arr_time - dep_time`. What do you expect to see? What do you see? What do you need to do to fix it?
-# I would expect that air_time would equal arr_time - dep_time, but the value for air_time did not equal this, so redid air_time as arr_time - dep_time
-```{r}
-flights <- mutate(flights,
-  air_time = arr_time - dep_time
-)
-```
 
+I would expect that air_time would equal arr_time - dep_time, but the value for air_time did not equal this, so redid air_time as arr_time - dep_time
+
+Looked at answers online, seems that taxi time is not included, so air_time is <= arr_time - dep_time assuming the flights are on the same day within the same timeframe
+```{r}
+#flights <- mutate(flights,air_time = arr_time - dep_time)
+```
 
 3. Compare `dep_time`, `sched_dep_time`, and `dep_delay`. How would you expect those three numbers to be related?
 
-I would expect that `dep_delay=dep_time - sched_dep_time` # yurp
+I would expect that `dep_delay=dep_time - sched_dep_time
+
+Cool workflow by the person that made the github answers sheet
+```{r}
+# make new variable called dep_delay_diff based on assumption that dep_delay=dep_time - sched_dep_time
+# assumes we haven't manipulated variables with modulus yet
+flights_deptime <-
+  mutate(flights,
+    dep_time_min = (dep_time %/% 100 * 60 + dep_time %% 100) %% 1440,
+    sched_dep_time_min = (sched_dep_time %/% 100 * 60 +
+      sched_dep_time %% 100) %% 1440,
+    dep_delay_diff = dep_delay - dep_time_min + sched_dep_time_min
+  )
+
+# then can test assumption - does this difference = 0?
+filter(flights_deptime, dep_delay_diff != 0)
+
+# its clear that not all of these dep_delay_diffs are 0! what's going on here?
+ggplot(
+  filter(flights_deptime, dep_delay_diff > 0),
+  aes(y = sched_dep_time_min, x = dep_delay_diff)
+) +
+  geom_point()
+
+# clear that all of the points with dep_delay_diff != 0 are at 1440 - this is midnight! just due to a strange way that this was recorded in the dataframe
+```
 
 4. Find the 10 most delayed flights using a ranking function. How do you want to handle ties? Carefully read the documentation for `min_rank()`. (*Hint, its probably easiest to use filter here*)
-# can use filter and rank argument
+min_rank() and dense_rank() both differ in how they assign the next value after ties
+can use filter and rank argument
+51, 3535, 3695, 177 are the most delayed flights
 ```{r}
 most_delay <- flights %>% filter(rank(desc(arr_delay)) <= 10)
-```
 # cool, this works!
-
+# this just ranks the top 10 arr_delays! cool
+```
 
 5. What does `1:3 + 1:10` return? Why?
+This produces a vector of length 10 and a warning because the shorter object is recycled.
 ```{r}
 1:3 + 1:10
 ```
 
-THis produces a vector of length 10 and a warning because the shorter object is recycled.
-
 6. What trigonometric functions does R provide?
-**SKIP**
+from ?Trig:
+
+cos(x)
+sin(x)
+tan(x)
+
+acos(x)
+asin(x)
+atan(x)
+atan2(y, x)
+
+cospi(x)
+sinpi(x)
+tanpi(x)
 
 # Section 5.6
 
