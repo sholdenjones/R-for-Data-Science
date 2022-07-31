@@ -6,12 +6,16 @@ editor_options:
 ---
 
 # 5.1 Data Transformation
+*Load packages*
 ```{r}
 #install.packages("nycflights13")
 #install.packages("Lahman") # for the baseball example
 library(tidyverse) #loads the tidyverse packages
 library(nycflights13) #you will probably need to install this package as well
 library(Lahman)
+
+# to store the flights df
+flights <- flights
 ```
 
 hmm, flights is a tibble, slightly different than a dataframe, tweaked to work better in tidyverse
@@ -148,7 +152,6 @@ arrange(flights, desc(distance))
 arrange(flights, distance)
 ```
 
-
 # 5.4 select()
 Here we will be using the `select` command to extract columns from a dataset.
 https://r4ds.had.co.nz/transform.html#exercises-10
@@ -281,27 +284,35 @@ tanpi(x)
 
 # 5.6 summarise()
 Summarising with `summarise` (note that `summarize` also works) and an intro to using pipes.
-
 https://r4ds.had.co.nz/transform.html#exercises-12
 
-summarise should be paired with group_by most of the time
+*summarise() collapses a df into a single row*
+```{r}
+summarise(flights, delay = mean(dep_delay, na.rm = TRUE))
+summarise(flights, distance = mean(distance, na.rm = TRUE))
+```
+
+*summarise should be paired with group_by most of the time*
 cool! so this looks at the delay by day of the year
 together group_by and summarise produce grouped summaries - super common tool with dplyr
+use with group_by b/c most often looking for comparisons across groups, not just the whole df all together
 ```{r}
 by_day <- group_by(flights, year, month, day)
 summarise(by_day, delay = mean(dep_delay, na.rm = TRUE))
 ```
 
 *the pipe!*
-
 *cool - so along this process they've kept the counts ie the number of flights for each destination - Jake says (and we know from stats) that this will be important to consider when looking at regressions / statistical analyses*
+
+relationship between distance and avg delay for each location
 ```{r}
-by_dest <- group_by(flights, dest)
-delay <- summarise(by_dest,
+by_dest <- group_by(flights, dest) # first group by dest
+delay <- summarise(by_dest, # then make a column for number of flights, mean distance, mean arr_delay
   count = n(),
   dist = mean(distance, na.rm = TRUE),
   delay = mean(arr_delay, na.rm = TRUE)
 )
+
 #> `summarise()` ungrouping output (override with `.groups` argument)
 delay <- filter(delay, count > 20, dest != "HNL")
 # only keep dest with >20 counts, get rid of HNL :(
@@ -312,8 +323,11 @@ delay <- filter(delay, count > 20, dest != "HNL")
 ggplot(data = delay, mapping = aes(x = dist, y = delay)) +
   geom_point(aes(size = count), alpha = 1/3) +
   geom_smooth(se = FALSE)
-#> `geom_smooth()` using method = 'loess' and formula 'y ~ x'
 ```
+*but that code is a pain to write - had to make intermediate dfs*
+
+##Pipe!
+*so lets use the pipe!*
 ```{r}
 delays <- flights %>% 
   group_by(dest) %>% 
@@ -323,14 +337,31 @@ delays <- flights %>%
     delay = mean(arr_delay, na.rm = TRUE)
   ) %>% 
   filter(count > 20, dest != "HNL")
-#> `summarise()` ungrouping output (override with `.groups` argument)
 ```
+
 *pipe says hold my beer*
 read as a series of imperative statements: group, then summarise, then filter
 pronounce %>% as "then"!
 piping improves the readiblity of code considerably! so will return to this again
 *using the pipe is key for the tidyverse! except for ggplot2, but stay tuned for ggvis!* 
 
+*let's try another practice pipe*
+let's look at how distance changes by air_time and airline?
+```{r}
+air_time <- flights %>%
+  group_by(carrier) %>%
+  summarise(
+    count = n(),
+    distance = mean(distance, na.rm = TRUE),
+    air_time = mean(air_time, na.rm = TRUE)
+  )
+
+ggplot(data = air_time, mapping = aes(distance, air_time, color = carrier)) +
+  geom_point(aes(size = count))
+```
+*cool! none of this is surprising, but we see that as distance goes up so does air_time in a perfectly linear way, same pattern for all airlines*
+
+make a dataset only with flights that weren't cancelled, easier going forward
 ```{r}
 not_cancelled <- flights %>% 
   filter(!is.na(dep_delay), !is.na(arr_delay))
@@ -344,7 +375,6 @@ delays <- not_cancelled %>%
   summarise(
     delay = mean(arr_delay)
   )
-#> `summarise()` ungrouping output (override with `.groups` argument)
 
 ggplot(data = delays, mapping = aes(x = delay)) + 
   geom_freqpoly(binwidth = 10)
@@ -358,15 +388,15 @@ delays <- not_cancelled %>%
     delay = mean(arr_delay, na.rm = TRUE),
     n = n()
   )
-#> `summarise()` ungrouping output (override with `.groups` argument)
 
-ggplot(data = delays, mapping = aes(x = n, y = delay)) + 
+delays %>%
+  filter(n > 25) %>%
+  ggplot(mapping = aes(x = n, y = delay)) + 
   geom_point(alpha = 1/10)
 ```
 *much greater variation in delay when there are fewer flights (n is lower)*
 
-## baseball!!!
-*see that variation in aggregate decreases as we get more data points and that there is a positive correlation between opportunities and skill - makes sense!*
+## Baseball!
 ```{r}
 # Convert to a tibble so it prints nicely
 batting <- as_tibble(Lahman::Batting)
@@ -377,18 +407,50 @@ batters <- batting %>%
     ba = sum(H, na.rm = TRUE) / sum(AB, na.rm = TRUE),
     ab = sum(AB, na.rm = TRUE)
   )
-#> `summarise()` ungrouping output (override with `.groups` argument)
 
 batters %>% 
   filter(ab > 100) %>% 
   ggplot(mapping = aes(x = ab, y = ba)) +
     geom_point() + 
     geom_smooth(se = FALSE)
-#> `geom_smooth()` using method = 'gam' and formula 'y ~ s(x, bs = "cs")'
+# also note that this is career-wide
+```
+
+*see that variation in aggregate decreases as we get more data points and that there is a positive correlation between opportunities and skill - makes sense!*
+```{r}
+batters %>% 
+  arrange(desc(ba))
+```
+
+*run through some Mets specific things here*
+how does Mets specific plot compare to the league-wide one above?
+*obvi easier to wittle down above ex. - but practicing building up ba from mets specific df*
+```{r}
+mets_2021 <- batting %>%
+  filter(yearID == 2021 & teamID == 'NYN') 
+
+mets_regulars <- mets_2021 %>%
+  filter(AB >= 100)
+
+mets_ba <- mets_2021 %>%
+  group_by(playerID) %>%
+  summarise(
+    ba = sum(H, na.rm = TRUE) / sum(AB, na.rm = TRUE),
+    ab = sum(AB, na.rm = TRUE)
+  )
+  
+mets_ba %>%
+  filter(ab > 100) %>%
+  ggplot(mapping = aes(x = ab, y = ba)) +
+           geom_point() +
+           geom_smooth()
+# lol! the Mets specific trend doesn follow that of the league,
+# makes sense as they gave way too many at bats to bad players in 2021!
+# but also this is single season, above was for a player's whole career
 ```
 
 ```{r}
-batters %>% 
+batters %>% # but when ranking still see players with 1 ab
   arrange(desc(ba))
 ```
 *useful summary functions *
@@ -410,6 +472,7 @@ not_cancelled %>%
   summarise(distance_sd = sd(distance)) %>% 
   arrange(desc(distance_sd))
 ```
+
 *measures of rank: min(x), quantile(x, 0.25), max(x). quantiles are a generalisation of the median. ex above will find a value that is greater than 25% of the values and less than the remaining 75% (whereas median is at the 50% mark)*
 ```{r}
 # When do the first and last flights leave each day?
@@ -439,8 +502,9 @@ not_cancelled %>%
 *can progressively roll up data sets, this is okay for sums and counts but need to think about weighting means and variances*
 ```{r}
 daily <- group_by(flights, year, month, day)
-per_day   <- summarise(daily, flights = n())
+per_day <- summarise(daily, flights = n())
 ```
+
 *ungrouping*
 ```{r}
 daily %>% 
@@ -452,13 +516,6 @@ daily %>%
 1. Brainstorm at least 5 different ways to assess the typical delay characteristics of a group of flights. Consider the following scenarios: (I would advise just doing one or two of these)
 
 - A flight is 15 minutes early 50% of the time, and 15 minutes late 50% of the time.
-```{r}
-test <- flights %>% 
-  group_by(flight) %>%
-  summarise(med_arr_delay = median(arr_delay, na.rm = TRUE), med_dep_delay = median(dep_delay, na.rm = TRUE)) %>%
-  filter(med_arr_delay < -15, med_dep_delay > 15)
-# only three flights satisfy these conditions
-```
 
 - A flight is always 10 minutes late.
 
@@ -466,61 +523,158 @@ test <- flights %>%
 
 - 99% of the time a flight is on time. 1% of the time it’s 2 hours late.
 
+*Ahh okay! So its important to think about variance and median and mean delays*
+
 Which is more important: arrival delay or departure delay?
+arrival delay is more important
 
 ## 5.6.2
 2. Come up with another approach that will give you the same output as `not_cancelled %>% count(dest)` and `not_cancelled %>% count(tailnum, wt = distance)` (without using `count()`).
-**SKIP**
+```{r}
+not_cancelled %>% 
+  count(dest) # their way 1
+
+not_cancelled %>% 
+  count(tailnum, wt = distance) # their way 2
+
+not_cancelled %>%
+  group_by(dest) %>% # use group_by and then summarize off length for 1st one
+  summarize(n = length(dest))
+
+not_cancelled %>%
+  group_by(tailnum) %>% # can do this as well - summarize and sum by distance for each tailnum
+  summarize(n = sum(distance))
+```
 
 ## 5.6.3
 3. Our definition of cancelled flights (`is.na(dep_delay) | is.na(arr_delay)` ) is slightly suboptimal. Why? Which is the most important column?
-seems like air_time could do this too, as if the flight arrives exactly on schedule, someone could input NA for delay?
+*seems like air_time could do this too, as if the flight arrives exactly on schedule, someone could input NA for delay?*
+*answer blog says just use arrive delay* aight
 
 ## 5.6.4
 4. Look at the number of cancelled flights per day. Is there a pattern? Is the proportion of cancelled flights related to the average delay?
 doesn't seem like there's a pattern - would expect more cancelled flights in winter but this doesn't seem to be the case
+
+*my attempt*
 ```{r}
 cancelled <- flights %>% 
   filter(is.na(dep_delay), is.na(arr_delay))
 
-daily_cancelled <- group_by(cancelled, year, month, day)
-per_day_cancelled   <- summarise(daily_cancelled, flights = n())
+daily_cancelled <- cancelled %>%
+  group_by(year, month, day)
 
-monthly_cancelled <- group_by(cancelled, year, month)
-per_month_cancelled   <- summarise(monthly_cancelled, flights = n())
+ggplot(cancelled_per_day, mapping = aes(x = flights_num, y = cancelled_num)) +
+    geom_point()
+# not a super clear pattern b/ween flights per day and cancelled flights per day as suggested in the answers sheet
+
+(monthly_cancelled <- group_by(cancelled, year, month))
+(per_month_cancelled   <- summarise(monthly_cancelled, flights = n()))
 # peaks in Feb, June, July, Dec
 ```
+
+*code from answers sheet*
+```{r}
+cancelled_per_day <- 
+  flights %>%
+  mutate(cancelled = (is.na(arr_delay) | is.na(dep_delay))) %>%
+  group_by(year, month, day) %>%
+  summarise(
+    cancelled_num = sum(cancelled),
+    flights_num = n(),
+  )
+
+ggplot(cancelled_per_day) +
+  geom_point(aes(x = flights_num, y = cancelled_num)) # i guess there's a little increase here
+
+cancelled_and_delays <- 
+  flights %>%
+  mutate(cancelled = (is.na(arr_delay) | is.na(dep_delay))) %>%
+  group_by(year, month, day) %>%
+  summarise(
+    cancelled_prop = mean(cancelled),
+    avg_dep_delay = mean(dep_delay, na.rm = TRUE),
+    avg_arr_delay = mean(arr_delay, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+ggplot(cancelled_and_delays) +
+  geom_point(aes(x = avg_arr_delay, y = cancelled_prop)) # here there's clearly a positive relationship b/ween avg delay per day and the proportion of cancelled flights per day
+```
+
 
 ## 5.6.5
 5. Which carrier has the worst delays? Challenge: can you disentangle the effects of bad airports vs. bad carriers? Why/why not? (Hint: think about `flights %>% group_by(carrier, dest) %>% summarise(n())`)
 F9 has med_arr_delay >5, only carrier
 
+*my attempt*
 ```{r}
 carrier <- flights %>% 
-  group_by(carrier)# %>%
+  group_by(carrier) %>%
   summarise(med_arr_delay = median(arr_delay, na.rm = TRUE), med_dep_delay = median(dep_delay, na.rm = TRUE)) %>%
-  filter(med_arr_delay > 5) #,med_dep_delay > 15) # could filter out just those carriers with median delay >x
+  filter(med_arr_delay > 5)
 
 carrier_desc <- carrier %>% # another way, can arrange by descending order of dep_delay. this way is prob. better b/c keep all
     # carriers
   group_by(carrier) %>%
-summarise(delay=median(dep_delay, na.rm=TRUE)) %>% # 
+summarise(delay=median(dep_delay, na.rm=TRUE)) %>%  
   arrange(desc(delay))
+```
+
+*code from answer blog* - says the same thing! F9 sucks
+*although disentangling airports and carriers shows OO with the highest avg delay difference*
+```{r}
+flights %>% # quick answer to first question
+  group_by(carrier) %>%
+  summarise(arr_delay = mean(arr_delay, na.rm = TRUE)) %>%
+  arrange(desc(arr_delay))
+
+# trying to disentangle airport vs carrier effects is a lot harder
+flights %>%
+  filter(!is.na(arr_delay)) %>%
+  # Total delay by carrier within each origin, dest
+  group_by(origin, dest, carrier) %>%
+  summarise(
+    arr_delay = sum(arr_delay),
+    flights = n()
+  ) %>%
+  # Total delay within each origin dest
+  group_by(origin, dest) %>%
+  mutate(
+    arr_delay_total = sum(arr_delay),
+    flights_total = sum(flights)
+  ) %>%
+  # average delay of each carrier - average delay of other carriers
+  ungroup() %>%
+  mutate(
+    arr_delay_others = (arr_delay_total - arr_delay) /
+      (flights_total - flights),
+    arr_delay_mean = arr_delay / flights,
+    arr_delay_diff = arr_delay_mean - arr_delay_others
+  ) %>%
+  # remove NaN values (when there is only one carrier)
+  filter(is.finite(arr_delay_diff)) %>%
+  # average over all airports it flies to
+  group_by(carrier) %>%
+  summarise(arr_delay_diff = mean(arr_delay_diff)) %>%
+  arrange(desc(arr_delay_diff))
 ```
 
 ## 5.6.6
 6. What does the `sort` argument to `count()` do. When might you use it?
-sort if tru (default is FALSE) will show the largest groups at the top
-good way to show the carriers with the most flights first?
-could we do this before summarizing? to retain some information on sample size per carrier?
-
+*sort if tru (default is FALSE) will show the largest groups at the top*
+good way to show the carriers with the most flights first
+*could use anytime we run count() followed by arrange()
 ```{r}
 carrier_count <- flights %>%
   count(carrier, sort = TRUE)
 # this could be a good way to remove all carriers with fewer
 # than x flights, if analyzing based on carriers
-```
 
+# also for dest
+(flights %>%
+    count(dest, sort = TRUE)
+  )
+```
 
 # 5.7
 
