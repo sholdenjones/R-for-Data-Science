@@ -764,7 +764,8 @@ tibble(x = 1:9,
 
 ## 5.7.2
 2. Which plane (tailnum) has the worst on-time record?
-*based on avg. flight delay that would be N844MH*
+*based on avg. flight delay that would be N844MH* -
+but if we only look at planes with more than 20 flights N203FR - this is probably better answer
 ```{r}
 (flights %>%
   group_by(tailnum) %>%
