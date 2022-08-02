@@ -5,6 +5,7 @@ editor_options:
   chunk_output_type: inline
 ---
 
+
 # 5.1 Data Transformation
 *Load packages*
 ```{r}
@@ -36,6 +37,7 @@ the result is a new data frame
 Figure 5.1 shows complete set of Boolean operators
 filter(flights, month == 11 | month == 12) # all flights that departed in Nov or Dec
 nov_dec <- filter(flights, month %in% c(11, 12))
+
 
 # 5.2 filter()
 https://r4ds.had.co.nz/transform.html#exercises-8
@@ -108,6 +110,7 @@ NA ^ 0 = 1 b/c all numbers ^ 0 =1
 "The value of NA & FALSE is FALSE because anything and FALSE is always FALSE"
 "b/c some possibilities are undefined, idk too mathy!
 
+
 # 5.3 arrange()
 https://r4ds.had.co.nz/transform.html#exercises-9  
 
@@ -152,6 +155,7 @@ arrange(flights, desc(distance))
 arrange(flights, distance)
 ```
 
+
 # 5.4 select()
 Here we will be using the `select` command to extract columns from a dataset.
 https://r4ds.had.co.nz/transform.html#exercises-10
@@ -193,12 +197,28 @@ can use ignore.case=FALSE to change this if need
 select(flights, contains("TIME"))
 ```
 
+
 # 5.5 mutate()
 
 Modifying and adding columns with `mutate`.
 https://r4ds.had.co.nz/transform.html#exercises-11
 
 if you just want to keep the new variables can use transmute()
+
+*from chapter*
+```{r}
+flights_sml <- select(flights, 
+  year:day, 
+  ends_with("delay"), 
+  distance, 
+  air_time
+)
+mutate(flights_sml,
+  gain = dep_delay - arr_delay,
+  speed = distance / air_time * 60
+)
+```
+
 
 ## 5.5.1
 1. Currently `dep_time` and `sched_dep_time` are convenient to look at, but hard to compute with because they’re not really continuous numbers. Convert them to a more convenient representation of number of minutes since midnight. (*Hint: `dep_time%/%100` will extract the number of hours and `dep_time%%60` will return the number of minutes*)
@@ -281,6 +301,7 @@ atan2(y, x)
 cospi(x)
 sinpi(x)
 tanpi(x)
+
 
 # 5.6 summarise()
 Summarising with `summarise` (note that `summarize` also works) and an intro to using pipes.
@@ -676,17 +697,90 @@ carrier_count <- flights %>%
   )
 ```
 
-# 5.7
-
+# 5.7 grouped mutates (and filters)
 https://r4ds.had.co.nz/transform.html#exercises-13
 
 Simultaneous grouping and summarizing!
+*stuff from the chapter*
+```{r}
+# find worst members of each group - here are the 10 biggest delays for each day
+flights_sml %>% 
+  group_by(year, month, day) %>%
+  filter(rank(desc(arr_delay)) < 10)
+
+# and here's how you get the 'best' flight per day - ie arr_delay rank = 1, so lowest most often negative
+flights_sml %>% 
+  group_by(year, month, day) %>%
+  filter(rank(arr_delay) == 1)
+
+# can also get all groups bigger than a threshold
+(popular_dests <- flights %>% 
+  group_by(dest) %>% 
+  filter(n() > 365)) #only looking at dest with more than 365 flights
+
+(popular_dests %>% #only popular dest
+  filter(arr_delay > 0) %>% #where there's a delay
+  mutate(prop_delay = arr_delay / sum(arr_delay)) %>% #new variable, prop_delay is one flights' delay over total delay for that destination? (per year I think)
+  select(year:day, dest, arr_delay, prop_delay)) # then just show year through day, and the other columns specified
+
+### not sure if sum(arr_delay) is summing for each day at each destination, or each destination across the whole year ###
+(popular_dests %>%
+  filter(arr_delay > 0) %>%
+  mutate(prop_delay = arr_delay / sum(arr_delay),
+           test = sum(arr_delay)
+         ))
+# see that each destination has only one sum arr_delay regardless of day
+### this test confirms that sum(arr_delay) is summing for each destination across the whole year ###
+
+# now challenge becomes how can we change the above to per day?
+(popular_dests %>%
+  filter(arr_delay > 0) %>%
+  group_by(year, month, day, dest) %>% # this does it!! group by day AND dest
+  mutate(prop_delay = arr_delay / sum(arr_delay),
+           test = sum(arr_delay)
+         ))
+#cool! each dest has a unique sum arr_delay for each day
+```
 
 ## 5.7.1
 1. Refer back to the lists of useful mutate and filtering functions. Describe how each operation changes when you combine it with grouping.
+*from answers blog*
+"Summary functions like mean(), median(), sum(), std() and others covered in the section Useful Summary Functions calculate their values within each group when used with mutate() or filter() and group_by()."
+"Arithmetic operators +, -, *, /, ^ are not affected by group_by()."
+*from blog*
+```{r}
+tibble(x = 1:9,
+       group = rep(c("a", "b", "c"), each = 3)) %>%
+  mutate(x_mean = mean(x)) %>% # take mean before grouping so mean of everything
+  group_by(group) %>%
+  mutate(x_mean_2 = mean(x)) # see how means one and two differ depending on if group_by was used
+
+tibble(x = 1:9,
+       group = rep(c("a", "b", "c"), each = 3)) %>%
+  mutate(y = x + 2) %>%
+  group_by(group) %>%
+  mutate(z = x + 2) # makes sense that these don't differ b/c each is at the individual level
+```
 
 ## 5.7.2
 2. Which plane (tailnum) has the worst on-time record?
+*based on avg. flight delay that would be N844MH*
+```{r}
+(flights %>%
+  group_by(tailnum) %>%
+   mutate(avg_plane_delay = mean(arr_delay, na.rm = TRUE)) %>%
+  arrange(desc(avg_plane_delay)) %>%
+   select(tailnum, avg_plane_delay)
+ )
+
+#from answers, important to filter by flights, only including those with more than 20 flights
+flights %>%
+  filter(!is.na(arr_delay)) %>%
+  group_by(tailnum) %>%
+  summarise(arr_delay = mean(arr_delay), n = n()) %>%
+  filter(n >= 20) %>%
+  filter(min_rank(desc(arr_delay)) == 1)
+```
 
 ## 5.7.3
 3. What time of day should you fly if you want to avoid delays as much as possible?
