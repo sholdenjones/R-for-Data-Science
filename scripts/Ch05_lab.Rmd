@@ -807,6 +807,21 @@ flights %>%
 
 ## 5.7.4
 4. For each destination, compute the total minutes of delay. For each flight, compute the proportion of the total delay for its destination.
+```{r}
+# total minutes of delay for each destination
+flights %>%
+  group_by(dest) %>%
+  summarize(total_delay = sum(arr_delay, na.rm = TRUE)) %>%
+  arrange(desc(total_delay)) # wow lots of delays
+
+# proportion of total delay for destination for each flight
+flights %>%
+  group_by(dest) %>%
+  summarize(dest_delay = sum(arr_delay, na.rm = TRUE), across()) %>%
+  mutate(prop_delay = arr_delay / dest_delay)
+# woohoo!
+```
+
 
 ## 5.7.5
 5. Delays are typically temporally correlated: even once the problem that caused the initial delay has been resolved, later flights are delayed to allow earlier flights to leave. Using lag(), explore how the delay of a flight is related to the delay of the immediately preceding flight.
