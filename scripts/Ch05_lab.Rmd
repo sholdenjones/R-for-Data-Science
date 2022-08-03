@@ -584,7 +584,7 @@ cancelled <- flights %>%
 daily_cancelled <- cancelled %>%
   group_by(year, month, day)
 
-ggplot(cancelled_per_day, mapping = aes(x = flights_num, y = cancelled_num)) +
+ggplot(daily_cancelled, mapping = aes(x = flights_num, y = cancelled_num)) +
     geom_point()
 # not a super clear pattern b/ween flights per day and cancelled flights per day as suggested in the answers sheet
 
@@ -785,6 +785,25 @@ flights %>%
 
 ## 5.7.3
 3. What time of day should you fly if you want to avoid delays as much as possible?
+*filtered so only times with > 20 flights, don't fly at 5pm! average delay close to one hour! wow*
+```{r}
+flights_deptime %>% 
+    group_by(sched_dep_time) %>%
+     summarize(n = n(), across()) %>%
+       filter(n >= 20) %>%
+        mutate(mean_delay = mean(arr_delay, na.rm = TRUE)) %>%
+# possibly add an n column?
+  ggplot(mapping = aes(sched_dep_time_min, mean_delay)) +
+    geom_point()
+# so cool! don't fly at around 5pm! would love to add a size component for looking at how many flights there are of each time - but this will work
+
+#lol! this is how the blog answered it, super easy!
+flights %>%
+  group_by(hour) %>%
+  summarise(arr_delay = mean(arr_delay, na.rm = TRUE)) %>%
+  arrange(arr_delay)
+# they go more general - earlier flights are better, which also comes up in my analysis
+```
 
 ## 5.7.4
 4. For each destination, compute the total minutes of delay. For each flight, compute the proportion of the total delay for its destination.
