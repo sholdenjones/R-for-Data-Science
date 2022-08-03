@@ -5,7 +5,6 @@ editor_options:
   chunk_output_type: inline
 ---
 
-
 # 5.1 Data Transformation
 *Load packages*
 ```{r}
@@ -807,6 +806,7 @@ flights %>%
 
 ## 5.7.4
 4. For each destination, compute the total minutes of delay. For each flight, compute the proportion of the total delay for its destination.
+*total minutes of delay for each destination*
 ```{r}
 # total minutes of delay for each destination
 flights %>%
@@ -814,12 +814,39 @@ flights %>%
   summarize(total_delay = sum(arr_delay, na.rm = TRUE)) %>%
   arrange(desc(total_delay)) # wow lots of delays
 
+# how the blog did it
+flights %>%
+  filter(arr_delay > 0) %>%
+  group_by(dest) %>%
+  mutate(
+    arr_delay_total = sum(arr_delay),
+    arr_delay_prop = arr_delay / arr_delay_total
+  ) %>%
+  select(dest, month, day, dep_time, carrier, flight,
+         arr_delay, arr_delay_prop) %>%
+  arrange(dest, desc(arr_delay_prop))
+```
+
+*proportion of total delay for its destination*
+```{r}
 # proportion of total delay for destination for each flight
 flights %>%
   group_by(dest) %>%
   summarize(dest_delay = sum(arr_delay, na.rm = TRUE), across()) %>%
   mutate(prop_delay = arr_delay / dest_delay)
 # woohoo!
+
+# blog interpreted flight as flight number - regular service, probably more informative
+flights %>%
+  filter(arr_delay > 0) %>%
+  group_by(dest, origin, carrier, flight) %>%
+  summarise(arr_delay = sum(arr_delay)) %>%
+  group_by(dest) %>%
+  mutate(
+    arr_delay_prop = arr_delay / sum(arr_delay)
+  ) %>%
+  arrange(dest, desc(arr_delay_prop)) %>%
+  select(carrier, flight, origin, dest, arr_delay_prop)
 ```
 
 
