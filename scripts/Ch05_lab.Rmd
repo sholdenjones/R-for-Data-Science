@@ -849,12 +849,140 @@ flights %>%
   select(carrier, flight, origin, dest, arr_delay_prop)
 ```
 
-
 ## 5.7.5
 5. Delays are typically temporally correlated: even once the problem that caused the initial delay has been resolved, later flights are delayed to allow earlier flights to leave. Using lag(), explore how the delay of a flight is related to the delay of the immediately preceding flight.
+*doesn't actually seem like previous delay is that important, no clear trend here - geom_hex() shows count for each*
+
+*but just checked the blog and they say that yes there's a big impact, seems like need to run a summarize to get mean of the lagged delay to help with interpretation*
+```{r}
+flights %>%
+  group_by(origin, year, month, day) %>%
+    mutate(previous_flight_delay = lag(dep_delay)) %>%
+      filter(!is.na(dep_delay), !is.na(previous_flight_delay)) %>% #filter important
+        ggplot(mapping = aes(previous_flight_delay, dep_delay)) +
+          geom_hex() # the hex is nice b/c includes count
+
+### look at blog response here ###
+lagged_delays <- flights %>%
+  arrange(origin, month, day, dep_time) %>%
+  group_by(origin) %>%
+  mutate(dep_delay_lag = lag(dep_delay)) %>%
+  filter(!is.na(dep_delay), !is.na(dep_delay_lag))
+
+lagged_delays %>%
+  group_by(dep_delay_lag) %>%
+  summarise(dep_delay_mean = mean(dep_delay)) %>% # this step seems key, also helps a lot with readability for code
+  ggplot(aes(x = dep_delay_lag, y = dep_delay_mean)) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(0, 1500, by = 120)) +
+  labs(y = "Departure Delay", x = "Previous Departure Delay")
+```
 
 ## 5.7.6
 6. Look at each destination. Can you find flights that are suspiciously fast? (i.e. flights that represent a potential data entry error). Compute the air time of a flight relative to the shortest flight to that destination. Which flights were most delayed in the air?
+*the most delayed flight in the air relative to the fastest time for a route was US2136 from LGA to BOS*
+```{r}
+not_cancelled %>%
+  group_by(dest, origin) %>%
+   summarize(fastest = min(air_time), prop_fastest = air_time / fastest, across()) %>%
+     arrange(rank(desc(prop_fastest))) # shows flights with biggest air delay relative to the fastest flight for a given route
+```
+
+*the blog's code is so much more complicated*
+```{r}
+#standardize
+standardized_flights <- flights %>%
+  filter(!is.na(air_time)) %>%
+  group_by(dest, origin) %>%
+  mutate(
+    air_time_mean = mean(air_time),
+    air_time_sd = sd(air_time),
+    n = n()
+  ) %>%
+  ungroup() %>%
+  mutate(air_time_standard = (air_time - air_time_mean) / (air_time_sd + 1))
+
+# look at distribution of standardization
+ggplot(standardized_flights, aes(x = air_time_standard)) +
+  geom_density()
+
+# look at unusually fast flights - smallest standardization values
+standardized_flights %>%
+  arrange(air_time_standard) %>%
+  select(
+    carrier, flight, origin, dest, month, day,
+    air_time, air_time_mean, air_time_standard
+  ) %>%
+  head(10) %>%
+  print(width = Inf)
+
+# using median for central tendency
+standardized_flights2 <- flights %>%
+  filter(!is.na(air_time)) %>%
+  group_by(dest, origin) %>%
+  mutate(
+    air_time_median = median(air_time),
+    air_time_iqr = IQR(air_time),
+    n = n(),
+    air_time_standard = (air_time - air_time_median) / air_time_iqr)
+
+# distribution of standardized flights with median as central tendency
+ggplot(standardized_flights2, aes(x = air_time_standard)) +
+  geom_density()
+
+standardized_flights2 %>%
+  arrange(air_time_standard) %>%
+  select(
+    carrier, flight, origin, dest, month, day, air_time,
+    air_time_median, air_time_standard
+  ) %>%
+  head(10) %>%
+  print(width = Inf)
+
+# distribution of ground speed of flights - to look at any possible data entry errors
+flights %>%
+  mutate(mph = distance / (air_time / 60)) %>%
+  ggplot(aes(x = mph)) +
+  geom_histogram(binwidth = 10)
+
+# here are the 5 fastest flights in terms of distance / air_time
+flights %>%
+  mutate(mph = distance / (air_time / 60)) %>%
+  arrange(desc(mph)) %>%
+  select(mph, flight, carrier, flight, month, day, dep_time) %>%
+  head(5)
+
+# were unusually fast flights just delayed on departure?
+flights %>%
+  mutate(mph = distance / (air_time / 60)) %>%
+  arrange(desc(mph)) %>%
+  select(
+    origin, dest, mph, year, month, day, dep_time, flight, carrier,
+    dep_delay, arr_delay
+  )
+# most of them were - likely not data entry problems
+
+# compare flights to the fastest flight on a route
+air_time_delayed <-
+  flights %>%
+  group_by(origin, dest) %>%
+  mutate(
+    air_time_min = min(air_time, na.rm = TRUE),
+    air_time_delay = air_time - air_time_min,
+    air_time_delay_pct = air_time_delay / air_time_min * 100
+  )
+
+# and they get the same answer as me!
+air_time_delayed %>%
+  arrange(desc(air_time_delay)) %>%
+  select(
+    air_time_delay, carrier, flight,
+    origin, dest, year, month, day, dep_time,
+    air_time, air_time_min
+  ) %>%
+  head() %>%
+  print(width = Inf)
+```
 
 ## 5.7.7
 7. Find all destinations that are flown by at least two carriers. Use that information to rank the carriers.
