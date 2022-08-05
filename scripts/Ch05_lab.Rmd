@@ -986,6 +986,31 @@ air_time_delayed %>%
 
 ## 5.7.7
 7. Find all destinations that are flown by at least two carriers. Use that information to rank the carriers.
+*there are 76 destinations that have at least two carriers*
+*EV services the most destinations*
+```{r}
+flights %>%
+  group_by(dest) %>%
+    summarize(service_flights = n_distinct(carrier), across()) %>%
+      filter(service_flights >= 2) %>%
+  group_by(carrier) %>%
+    summarize(service_dest = n_distinct(dest)) %>%
+      arrange(desc(service_dest))
+```
 
 ## 5.7.8
 8. For each plane, count the number of flights before the first delay of greater than 1 hour.
+*from the blog*
+```{r}
+flights %>%
+  # sort in increasing order
+  select(tailnum, year, month,day, dep_delay) %>%
+  filter(!is.na(dep_delay)) %>%
+  arrange(tailnum, year, month, day) %>%
+  group_by(tailnum) %>%
+  # cumulative number of flights delayed over one hour
+  mutate(cumulative_hr_delays = cumsum(dep_delay > 60)) %>%
+  # count the number of flights == 0
+  summarise(total_flights = sum(cumulative_hr_delays < 1)) %>%
+  arrange(total_flights)
+```
