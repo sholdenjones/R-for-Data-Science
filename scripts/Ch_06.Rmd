@@ -1,0 +1,36 @@
+---
+title: "Workflow:scripts"
+author: "Holden Jones"
+date: '2022-08-09'
+output: html_document
+---
+
+# Workflow: scripts
+https://r4ds.had.co.nz/workflow-scripts.html
+
+# 6.1 Running code
+
+# 6.2 RStudio diagnostics
+
+# 6.3 Exercies
+
+## 6.3.1
+
+1. Go to the RStudio Tips twitter account, https://twitter.com/rstudiotips and find one tip that looks interesting. Practice using it!
+*make code commenting consistent - insert dashes until column 80*
+```{r}
+# Have to install from this person's github:
+#devtools::install_github("mine-cetinkaya-rundel/addmins", type = "source")
+
+# then use via addins GUI above to help with formatting
+
+# Example ----------------------------------------------------------------------
+library(dplyr)
+# code and comments
+
+# Example 2 --------------------------------------------------------------------
+```
+
+
+
+
