@@ -15,12 +15,13 @@ https://r4ds.had.co.nz/workflow-scripts.html
 # 6.3 Exercies
 
 ## 6.3.1
-
 1. Go to the RStudio Tips twitter account, https://twitter.com/rstudiotips and find one tip that looks interesting. Practice using it!
 *make code commenting consistent - insert dashes until column 80*
+*seems like I'll need to do this at the beginning of every script I want to use it!*
 ```{r}
 # Have to install from this person's github:
-#devtools::install_github("mine-cetinkaya-rundel/addmins", type = "source")
+devtools::install_github("mine-cetinkaya-rundel/addmins", type = "source")
+library(addmins)
 
 # then use via addins GUI above to help with formatting
 
@@ -31,6 +32,10 @@ library(dplyr)
 # Example 2 --------------------------------------------------------------------
 ```
 
+## 6.3.2
+2. What other common mistakes will RStudio diagnostics report? Read https://support.rstudio.com/hc/en-us/articles/205753617-Code-Diagnostics to find out.
+*lots of info here and ways to customize this. not sure I know enough yet to have an opinion tho!*
 
-
-
+## Hadley's style guide
+http://adv-r.had.co.nz/Style.html
+*use this!*
