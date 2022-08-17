@@ -5,31 +5,86 @@ editor_options:
   chunk_output_type: inline
 ---
 
-# 7.3 Variation
+# Exploratory Data Analysis
 
-######################################################################
-##https://r4ds.had.co.nz/exploratory-data-analysis.html#exercises-15##
-######################################################################
+--------------------------------------------------------------------------------
+# 7.1 Introduction
+
+1. Generate questions about your data.
+
+2. Search for answers by visualising, transforming, and modelling your data.
+
+3. Use what you learn to refine your questions and/or generate new questions.
 
 ```{r}
 library(tidyverse)
 ```
 
-# general questions to ask:
-What type of variation occurs within my variables?
-
-What type of covariation occurs between my variables?
+--------------------------------------------------------------------------------
+# 7.2 Questions
 
 
-# use geom_freqpoly to overlay multiple histograms on top of each other, colored by cut in this example
+Develop an understanding of the data. Ask lots of questions to get good questions.
 
+Good questions to start with:
+
+1. What type of variation occurs within my variables?
+
+2. What type of covariation occurs between my variables?
+
+Definitions:
+
+*A variable* - a quantity, quality, or property that you can measure.
+
+*A value* - the state of a variable when you measure it. The value of a variable may change from measurement to measurement.
+
+*An observation* - a set of measurements made under similar conditions (you usually make all of the measurements in an observation at the same time and on the same object). An observation will contain several values, each associated with a different variable. I’ll sometimes refer to an observation as a data point.
+
+*Tabular data* - a set of values, each associated with a variable and an observation. Tabular data is tidy if each value is placed in its own “cell”, each variable in its own column, and each observation in its own row.
+
+
+--------------------------------------------------------------------------------
+# 7.3 Variation
+######################################################################
+https://r4ds.had.co.nz/exploratory-data-analysis.html#exercises-15##
+######################################################################
+
+## 7.3.1 Visualising distributions
+
+*use a bar chart to visualise a categorical variable*
 ```{r}
+ggplot(data = diamonds) +
+  geom_bar(mapping = aes(x = cut))
+
+# can also compute how many observations occured with count()
+diamonds %>% 
+  count(cut)
+```
+
+*use a histogram to visualise a continuous variable*
+```{r}
+ggplot(data = diamonds) +
+  geom_histogram(mapping = aes(x = carat), binwidth = 0.5)
+
+# can compute by hand using cut_width()
+diamonds %>% 
+  count(cut_width(carat, 0.5))
+
+# important to explore a variety of binwidths
 smaller <- diamonds %>% 
   filter(carat < 3)
+  
+ggplot(data = smaller, mapping = aes(x = carat)) +
+  geom_histogram(binwidth = 0.1)
 
+# use geom_freqpoly to overlay multiple histograms on top of each other, colored by cut in this example
 ggplot(data = smaller, mapping = aes(x = carat, colour = cut)) +
   geom_freqpoly(binwidth = 0.1)
 ```
+
+--------------------------------------------------------------------------------
+#RESUME 7.3.2#
+--------------------------------------------------------------------------------
 
 1. Explore the distribution of each of the `x`, `y`, and `z` variables in `diamonds`. What do you learn? Think about a diamond and how you might decide which dimension is the length, width, and depth. 
 # much more variation in y and z than x
