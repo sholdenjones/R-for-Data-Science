@@ -180,14 +180,21 @@ flights %>%
 1. What happens to missing values in a histogram? What happens to missing values in a bar chart? Why is there a difference?
 *geom_bar puts NAs as a category while histogram removes them. This makes sense because histogram is continuous and barplot is categorical*
 *values removed with non-finite values (stat_bin) for hist*
-
-#### RESUME HERE###
 ```{r}
-#### look at answer sheets
+diamonds2 <- diamonds %>%
+  mutate(y = ifelse(y < 3 | y > 20, NA, y))
+
+ggplot(diamonds2, aes(x = y)) +
+  geom_histogram()
+
+diamonds %>%
+  mutate(cut = if_else(runif(n()) < 0.1, NA_character_, as.character(cut))) %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = cut))
 ```
 
 2. What does `na.rm = TRUE` do in `mean()` and `sum()`?
-
+*allows us to take mean or sum by removing NA values, otherwise it would be NA*
 ```{r}
 mean(diamonds2$y, na.rm = TRUE) #allows us to take mean by removing NA values
 
@@ -195,8 +202,8 @@ sum(diamonds2$y, na.rm = TRUE) # this doesn't seem like it has an impact. perhap
 ```
 
 
-
-# 7.5 Covariation, part I
+--------------------------------------------------------------------------------
+# 7.5.1 Covariation, categorical and Continuous
 
 ######################################################################
 https://r4ds.had.co.nz/exploratory-data-analysis.html#exercises-17##
@@ -204,8 +211,7 @@ https://r4ds.had.co.nz/exploratory-data-analysis.html#exercises-17##
 
 *if we display density instead of count on the y axis it will make the area under the curve equal to one - seems like this can be a way to standardize different observations that may have vastly different counts*
 
-*in diamonds, cut is an ordered factor: fiar is worse than good, which is worse than very good etc. So the order of these categorical variables is intrinsic and does matter. We can use the reorder() function to reorder the variables*
-
+*in diamonds, cut is an ordered factor: fair is worse than good, which is worse than very good etc. So the order of these categorical variables is intrinsic and does matter. We can use the reorder() function to reorder the variables*
 ```{r}
 ggplot(data = mpg) +
   geom_boxplot(mapping = aes(x = reorder(class, hwy, FUN = median), y = hwy))
@@ -216,12 +222,10 @@ ggplot(data = mpg) +
   coord_flip() # cord_flip() flips the ggplot 90 degrees. Good if have long variable names
 ```
 
+## 7.5.1.1 Exercises
 
 1. Use what you’ve learned to improve the visualisation of the departure times of cancelled vs. non-cancelled flights dataset from  the `nycflights13` library. Hint, think boxplot!
-
 ```{r}
-library(nycflights13)
-
 flights2 <- flights %>% # now can use this df with new variable cancelled
   mutate(
     cancelled = is.na(dep_time),
@@ -231,16 +235,14 @@ flights2 <- flights %>% # now can use this df with new variable cancelled
   )
 
 ggplot(data = flights2, mapping = aes(x = cancelled, y = sched_dep_time)) +
-  geom_boxplot()
-# I think this works?
+  geom_boxplot() +
+  labs(x = "Cancelled?", y = "Scheduled Departure Time")
 ```
 
-
 2. What variable in the diamonds dataset is most important for predicting the price of a diamond? How is that variable correlated with cut? Why does the combination of those two relationships lead to lower quality diamonds being more expensive?
-
 *I guess we'll just use a corplot here? seems kinda weird that this would be asked*
+*looks like carat, x, y and z are strongly correlated with price - makes sense!*
 ```{r}
-#install.packages("corrplot")
 library("corrplot")
 
 diamond.cor <-cor(diamonds[,-(2:4)])
@@ -250,15 +252,21 @@ corrplot.mixed(diamond.cor)
 ```
 
 3. Install the ggstance package, and create a horizontal boxplot. How does this compare to using `coord_flip()`?
-**SKIP**
+*Looks like newer versions of ggplot do not require coord_flip()*
+*If we simply load ggstance package we can select the orientation of each geom*
+```{r}
+library("ggstance")
 
+ggplot(mpg) +
+  geom_boxplot(mapping = aes(y = reorder(class, hwy, FUN = median), x = hwy))
+# this produces the same plot as using coord_flip, but direction comes from aes mapping
+```
 
 4. One problem with boxplots is that they were developed in an era of much smaller datasets and tend to display a prohibitively large number of “outlying values”. One approach to remedy this problem is the letter value plot. Install the lvplot package, and try using `geom_lv()` to display the distribution of price vs cut. What do you learn? How do you interpret the plots?
-**SKIP**
-
+**SKIP** geom_lv() not supported in current R version
 
 5. Compare and contrast `geom_violin()` with a facetted `geom_histogram()`, or a coloured `geom_freqpoly()`. What are the pros and cons of each method?
-
+*seems like geom_violin() can address similar concerns as geom_lv()*
 ```{r}
 #geom_violin:
 ggplot(data = diamonds, mapping = aes(x = cut, y = price)) +
@@ -276,34 +284,65 @@ ggplot(data = diamonds, mapping = aes(x = price)) +
 ggplot(data = diamonds, mapping = aes(x = price, y = ..count..)) + 
   geom_freqpoly(mapping = aes(colour = cut), binwidth = 500)
 # looks pretty cool and easier to interpret than violin plot. Can change y to be either density or count (..density..)
-# This means we can input y = ..count.. if we care about the absolute numbers of each cat variable, or can leave as density if that's not important. So we've got a lot of information in this one little plot. Don't need to facet like we did for geom_histogram and it looks cool 
+# This means we can input y = ..count.. if we care about the absolute numbers of each cat variable, or can leave as density if that's not important. So we've got a lot of information in this one little plot. Don't need to facet like we did for geom_histogram and it looks cool
+```
+
+6. If you have a small dataset, it’s sometimes useful to use `geom_jitter()` to see the relationship between a continuous and categorical variable. The ggbeeswarm package provides a number of methods similar to `geom_jitter()`. List them and briefly describe what each one does.
+*provides geoms for ggplot that provide more control over how jittering takes place*
+```{r}
+library("ggbeeswarm")
+
+# for continuous response against categorical predictor variable
+ggplot(mpg, mapping = aes(class, hwy)) +
+  geom_jitter()
+
+ggplot(mpg, mapping = aes(class, hwy)) +
+  geom_quasirandom()
+# seems like this is similar to a geom_violin, allows us to look at dist. 
 ```
 
 
-6. If you have a small dataset, it’s sometimes useful to use `geom_jitter()` to see the relationship between a continuous and categorical variable. The ggbeeswarm package provides a number of methods similar to `geom_jitter()`. List them and briefly describe what each one does.
-**SKIP**
-
-# 7.5 Covariation, part II
+--------------------------------------------------------------------------------
+# 7.5.2 Covariation, two categorical variables
 
 ######################################################################
 https://r4ds.had.co.nz/exploratory-data-analysis.html#exercises-18##
 ######################################################################
 
-1. How could you rescale the count dataset given below to more clearly show the distribution of cut within colour, or colour within cut?
-
-*Not sure what the question is asking here. Here's a plot!*
+To visualise the covariation between categorical variables, you’ll need to count the number of observations for each combination. One way to do that is to rely on the built-in geom_count()
 ```{r}
+ggplot(data = diamonds) +
+  geom_count(mapping = aes(x = cut, y = color))
+# size of points corresponds to number of observations
+```
+
+could also compute count with dplyr and then display with geom_tile()
+```{r}
+diamonds %>% 
+  count(color, cut)
+
 diamonds %>% 
   count(color, cut) %>%  
   ggplot(mapping = aes(x = color, y = cut)) +
     geom_tile(mapping = aes(fill = n))
 ```
 
+## 7.5.2.1 Exercises
+
+1. How could you rescale the count dataset given below to more clearly show the distribution of cut within colour, or colour within cut?
+*group_by() then mutate new prop variable*
+```{r}
+diamonds %>% 
+  count(color, cut) %>%  
+  group_by(color) %>%
+  mutate(prop = n / sum(n)) %>% # make a new var prop after group_by
+  ggplot(mapping = aes(x = color, y = cut)) +
+    geom_tile(mapping = aes(fill = prop))
+```
+
 2. Use `geom_tile()` together with `dplyr` to explore how average flight delays in the `nycflights13` library vary by destination and month of year. What makes the plot difficult to read? How could you improve it?
-
 *count month, year, destination? that's gonna be a ton of "bins"*
-*then plot this with geom_tile against flight delays?*
-
+*answer book says lets remove NAs first, good idea - get rid of dest that don't have at least  one flight per month*
 ```{r}
 library(nycflights13)
 
@@ -313,27 +352,45 @@ flights %>%
     geom_tile(mapping = aes(fill = n))
 
 # make dataframe grouped by destination and month, summarize to get avg_delay
-
-avg.delay <- flights %>% group_by(dest, month) %>% summarize(avg_delay=mean(dep_delay, na.rm=TRUE))
+avg.delay <- flights %>% group_by(dest, month) %>% 
+  summarize(avg_delay=mean(dep_delay, na.rm=TRUE))
         
 ggplot(data=avg.delay, aes(x=dest, y=month)) + 
   geom_tile(aes(fill=avg_delay))
-
 # still probably too much going on for geom_tile to make sense here
+
+# from answer book
+flights %>%
+  group_by(month, dest) %>%                          # This gives us (month, dest) pairs
+  summarise(dep_delay = mean(dep_delay, na.rm = TRUE)) %>% # avg delay per month
+  group_by(dest) %>%                                # group all (month, dest) pairs by dest
+  filter(n() == 12) %>%                 # and only select those that have one entry per month
+  ungroup() %>%
+  mutate(dest = reorder(dest, dep_delay)) %>%
+  ggplot(aes(x = factor(month), y = dest, fill = dep_delay)) +
+  geom_tile() +
+  labs(x = "Month", y = "Destination", fill = "Departure Delay")
 ```
 
-
 3. Why is it slightly better to use `aes(x = color, y = cut)` rather than `aes(x = cut, y = color)` in the example below?
-
-*this way has smaller count values on the bottom and larger ones on the top, the other way has the reverse arrangement*
+*usually better to have more variables on y axis, fewer on x axis*
 ```{r}
+# preferred
 diamonds %>% 
   count(color, cut) %>%  
   ggplot(mapping = aes(x = color, y = cut)) +
     geom_tile(mapping = aes(fill = n))
+
+# alternative
+diamonds %>% 
+  count(color, cut) %>%  
+  ggplot(mapping = aes(x = cut, y = color)) +
+    geom_tile(mapping = aes(fill = n))
 ```
 
-# 7.5 Covariation, part III
+## RESUME
+--------------------------------------------------------------------------------
+# 7.5.3 Covariation, two continuous variables
 
 ######################################################################
 https://r4ds.had.co.nz/exploratory-data-analysis.html#exercises-19##
