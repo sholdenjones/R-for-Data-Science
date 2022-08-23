@@ -388,7 +388,7 @@ diamonds %>%
     geom_tile(mapping = aes(fill = n))
 ```
 
-## RESUME
+
 --------------------------------------------------------------------------------
 # 7.5.3 Covariation, two continuous variables
 
@@ -396,22 +396,44 @@ diamonds %>%
 https://r4ds.had.co.nz/exploratory-data-analysis.html#exercises-19##
 ######################################################################
 
-*geom_bin2d() and geom_hex() bins in two dimensions*
-*need hexbin package*
-
+Scatterplots become less useful as the size of your dataset grows, because points begin to overplot, and pile up into areas of uniform black (as above). You’ve already seen one way to fix the problem: using the alpha aesthetic to add transparency.
 ```{r}
-ggplot(data = diamonds) +
+ggplot(data = diamonds) + 
+  geom_point(mapping = aes(x = carat, y = price), alpha = 1 / 100)
+```
+
+But using transparency can be challenging for very large datasets. Another solution is to use bin. Previously you used geom_histogram() and geom_freqpoly() to bin in one dimension. Now you’ll learn how to use geom_bin2d() and geom_hex() to bin in two dimensions.
+```{r}
+ggplot(data = smaller) +
   geom_bin2d(mapping = aes(x = carat, y = price))
 
-install.packages("hexbin")
-ggplot(data = diamonds) +
+library("hexbin")
+
+ggplot(data = smaller) +
   geom_hex(mapping = aes(x = carat, y = price))
 ```
 
+Another option is to bin one continuous variable so it acts like a categorical variable. Then you can use one of the techniques for visualising the combination of a categorical and a continuous variable that you learned about. For example, you could bin carat and then for each group, display a boxplot:
+```{r}
+ggplot(data = smaller, mapping = aes(x = carat, y = price)) + 
+  geom_boxplot(mapping = aes(group = cut_width(carat, 0.1)))
+```
+
+cut_width(x, width), as used above, divides x into bins of width width. By default, boxplots look roughly the same (apart from number of outliers) regardless of how many observations there are, so it’s difficult to tell that each boxplot summarises a different number of points. One way to show that is to make the width of the boxplot proportional to the number of points with varwidth = TRUE.
+
+Another approach is to display approximately the same number of points in each bin. That’s the job of cut_number():
+*I think this looks pretty weird tho!*
+```{r}
+ggplot(data = smaller, mapping = aes(x = carat, y = price)) + 
+  geom_boxplot(mapping = aes(group = cut_number(carat, 20)))
+```
+
+## 7.5.3.1 Exercises
 
 1. Instead of summarising the conditional distribution with a boxplot (given below), you could use a frequency polygon. What do you need to consider when using `cut_width()` vs `cut_number()`? How does that impact a visualisation of the 2d distribution of carat and price?
-
 *cut_width() makes every boxplot the same width, cut_number() determines boxplot width based on the distribution of the number of observations specified*
+*using cut_number with a 2D freqpoly could result in it being super tough to read*
+*with color can't be more than 8 bins*
 ```{r}
 smaller <- diamonds %>% 
   filter(carat < 3)
@@ -419,30 +441,54 @@ smaller <- diamonds %>%
 ggplot(data = smaller, mapping = aes(x = carat, y = price)) + 
   geom_boxplot(mapping = aes(group = cut_number(carat, 20)))
 
+# here cut_width binning by carat - color helps distinguish
 ggplot(data = smaller, mapping = aes(x = price)) + 
-  geom_freqpoly(mapping = aes(group = cut_width(carat, 0.5)))
-```
+  geom_freqpoly(mapping = aes(color = cut_width(carat, 0.5)))
 
+# here cut_number binning by number of observations - messy!
+ggplot(data = smaller, mapping = aes(x = price)) + 
+  geom_freqpoly(mapping = aes(group = cut_number(carat, 20)))
+```
 
 2. Visualise the distribution of `carat`, partitioned by `price`.
 *aes has group by and color by price. keep both within aes to retain the label info which is important*
 ```{r}
+# here's a freqpoly, but kinda hard to read
 ggplot(data = diamonds, mapping = aes(x = carat)) + 
-  geom_freqpoly(mapping = aes(group = cut_width(price, 5000), col=cut_width(price, 5000)))
+  geom_freqpoly(mapping = aes(group = cut_width(price, 5000), 
+                              col=cut_width(price, 5000)))
+
+# so instead try a boxplot - very interesting that this is what I did
+ggplot(data = diamonds, mapping = aes(x = carat)) + 
+  geom_boxplot(mapping = aes(group = cut_number(price, 10))) 
+  # interesting that this does same background thing, but loses y axis info
+
+# which looks very similar but is different to what the answer blog did
+ggplot(diamonds, aes(x = cut_number(price, 10), y = carat)) + 
+  # retains y axis info
+  geom_boxplot() +
+  coord_flip() +
+  xlab("Price")
 ```
 
 3. How does the price distribution of very large diamonds compare to small diamonds? Is it as you expect, or does it surprise you?
 *I think this is as we'd expect. Small diamonds have  apeak at lower prices, medium ones have a peak at higher prices, large ones have a peak at higher prices and really large ones have smaller sample sizes and quite a bit of variation*
 ```{r}
+# freqpoly, but I prefer the boxplot below
 ggplot(data = diamonds, mapping = aes(x = price)) + 
   geom_freqpoly(mapping = aes(group = cut_width(carat, 1), col=cut_width(carat, 1)))
+
+# boxplot, this is more easily digestible
+ggplot(diamonds, aes(x = cut_number(carat, 10), y = price)) + 
+  geom_boxplot() +
+  labs(x = "Carat", y = "Price")
 ```
 
 4. Combine two of the techniques you’ve learned to visualise the combined distribution of `cut`, `carat`, and `price`.
-
 ```{r}
 ggplot(diamonds, aes(x = cut_number(carat, 8), y = price, color = cut)) +
-  geom_boxplot()
+  geom_boxplot() +
+  labs(x = "Price", y = "Carat")
 ```
 
 5. Two dimensional plots reveal outliers that are not visible in one dimensional plots. For example, some points in the plot below have an unusual combination of x and y values, which makes the points outliers even though their x and y values appear normal when examined separately. Why is a scatterplot a better display than a binned plot for this case?
@@ -452,3 +498,49 @@ ggplot(data = diamonds) +
   geom_point(mapping = aes(x = x, y = y)) +
   coord_cartesian(xlim = c(4, 11), ylim = c(4, 11))
 ```
+
+
+--------------------------------------------------------------------------------
+# 7.6 Patterns and models
+
+Patterns in your data provide clues about relationships. If a systematic relationship exists between two variables it will appear as a pattern in the data. If you spot a pattern, ask yourself:
+
+Could this pattern be due to coincidence (i.e. random chance)?
+
+How can you describe the relationship implied by the pattern?
+
+How strong is the relationship implied by the pattern?
+
+What other variables might affect the relationship?
+
+Does the relationship change if you look at individual subgroups of the data?
+
+A scatterplot of Old Faithful eruption lengths versus the wait time between eruptions shows a pattern: longer wait times are associated with longer eruptions. The scatterplot also displays the two clusters that we noticed above.
+```{r}
+ggplot(data = faithful) + 
+  geom_point(mapping = aes(x = eruptions, y = waiting))
+```
+
+
+--------------------------------------------------------------------------------
+# 7.7 ggplot2 calls
+
+Typically, the first one or two arguments to a function are so important that you should know them by heart. The first two arguments to ggplot() are data and mapping, and the first two arguments to aes() are x and y. In the remainder of the book, we won’t supply those names. That saves typing, and, by reducing the amount of boilerplate, makes it easier to see what’s different between plots. That’s a really important programming concern that we’ll come back to in functions.
+
+Sometimes we’ll turn the end of a pipeline of data transformation into a plot. Watch for the transition from %>% to +. I wish this transition wasn’t necessary but unfortunately ggplot2 was created before the pipe was discovered.
+```{r}
+diamonds %>% 
+  count(cut, clarity) %>% 
+  ggplot(aes(clarity, cut, fill = n)) + 
+    geom_tile()
+```
+
+
+--------------------------------------------------------------------------------
+# 7.8 Learning more
+
+If you want to learn more about the mechanics of ggplot2, I’d highly recommend grabbing a copy of the ggplot2 book: https://amzn.com/331924275X. It’s been recently updated, so it includes dplyr and tidyr code, and has much more space to explore all the facets of visualisation. Unfortunately the book isn’t generally available for free, but if you have a connection to a university you can probably get an electronic version for free through SpringerLink.
+
+Another useful resource is the R Graphics Cookbook by Winston Chang. Much of the contents are available online at http://www.cookbook-r.com/Graphs/.
+
+I also recommend Graphical Data Analysis with R, by Antony Unwin. This is a book-length treatment similar to the material covered in this chapter, but has the space to go into much greater depth.
