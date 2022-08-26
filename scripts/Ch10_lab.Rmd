@@ -1,0 +1,177 @@
+---
+title: "Tibble"
+author: "Holden Jones"
+date: '2022-08-24'
+output: html_document
+---
+
+# Tibbles
+
+
+--------------------------------------------------------------------------------
+# 10.1 Introduction
+
+Tibbles are data frames, but are tweaked to make life a bit easier. Looking into
+the tibble package
+
+Most of the time will refer to data frames and tibbles interchangeably
+
+```{r}
+library(tidyverse)
+```
+
+
+--------------------------------------------------------------------------------
+# 10.2 Creating tibbles
+
+Almost all functions in this book create tibbles - tibbles are a unifying 
+feature of the diyverse
+
+as_tibble() coerces data frame into a tibble, tribble() for data entry in code
+```{r}
+as_tibble(iris)
+
+tribble(
+  ~x, ~y, ~z,
+  #--|--|----
+  "a", 2, 3.6,
+  "b", 1, 8.5
+)
+```
+
+
+--------------------------------------------------------------------------------
+# 10.3 Tibbles vs. data.frame
+
+Two main differences: printing and subsetting
+
+## 10.3.1 Printing
+
+Tibbles only show the first 10 rows and the columns that fit on the screen
+Also each column reports its type
+You can alter the default print settings tho, pretty easily
+```{r}
+#runif() gives random number 0-1 (default), length specified
+tibble(
+  a = lubridate::now() + runif(1e2) * 86400,
+  b = lubridate::today() + runif(1e2) * 30, 
+  c = 1:1e2,
+  d = runif(1e2),
+  e = sample(letters, 1e2, replace = TRUE)
+)
+```
+
+## 10.3.2 Subsetting
+
+$ and [[ are tools for pulling out single variables
+```{r}
+df <- tibble(
+  x = runif(5),
+  y = rnorm(5)
+)
+
+# Extract by name
+df$x
+#> [1] 0.73296674 0.23436542 0.66035540 0.03285612 0.46049161
+df[["x"]]
+#> [1] 0.73296674 0.23436542 0.66035540 0.03285612 0.46049161
+
+# Extract by position
+df[[1]]
+#> [1] 0.73296674 0.23436542 0.66035540 0.03285612 0.46049161
+
+# Try with mpg datset
+mpg$hwy
+mpg[["cty"]]
+```
+
+To use these in a pipe, you’ll need to use the special placeholder .:
+```{r}
+df %>% .$x
+#> [1] 0.73296674 0.23436542 0.66035540 0.03285612 0.46049161
+df %>% .[["x"]]
+#> [1] 0.73296674 0.23436542 0.66035540 0.03285612 0.46049161
+
+mpg %>% .$hwy
+```
+
+Compared to a data.frame, tibbles are more strict: they never do partial matching, and they will generate a warning if the column you are trying to access does not exist.
+  - Otherwise they seem pretty similar so far
+
+  
+------------------------------------------------------------------------------
+# 10.4 Interacting with older code
+
+Some older functions don’t work with tibbles. If you encounter one of these functions, use as.data.frame() to turn a tibble back to a data.frame:
+
+The main reason that some older functions don’t work with tibble is the [ function. We don’t use [ much in this book because dplyr::filter() and dplyr::select() allow you to solve the same problems with clearer code (but you will learn a little about it in vector subsetting). With base R data frames, [ sometimes returns a data frame, and sometimes returns a vector. With tibbles, [ always returns another tibble.
+
+
+--------------------------------------------------------------------------------
+# 10.5 Exercises
+
+1. How can you tell if an object is a tibble? (Hint: try printing mtcars, which is a regular data frame).
+*It tells you right at the top in print! A tibble
+```{r}
+(mtcars)
+(mpg)
+```
+
+2. Compare and contrast the following operations on a data.frame and equivalent tibble. What is different? Why might the default data frame behaviours cause you frustration?
+*In this example there is an observation and column that both contain "a" - so could be confusing regarding what is returned*
+*Aah okay, df$x also finds the xyz column b/c it begins with x, so this could be confusing down the line!*
+```{r}
+df <- data.frame(abc = 1, xyz = "a")
+df$x
+df[, "xyz"]
+df[, c("abc", "xyz")]
+
+as_tibble(df)
+df$x
+df[, "xyz"]
+df[, c("abc", "xyz")]
+```
+
+3. If you have the name of a variable stored in an object, e.g. var <- "mpg", how can you extract the reference variable from a tibble?
+*Just use the [[]] - the $ would look for a column*
+
+4. Practice referring to non-syntactic names in the following data frame by:
+
+  1. Extracting the variable called 1.
+
+  2. Plotting a scatterplot of 1 vs 2.
+
+  3. Creating a new column called 3 which is 2 divided by 1.
+
+  4. Renaming the columns to one, two and three.
+```{r}
+annoying <- tibble(
+  `1` = 1:10,
+  `2` = `1` * 2 + rnorm(length(`1`))
+)
+
+#1.
+annoying[["1"]]
+
+#2.
+ggplot(annoying, mapping = aes(annoying$"1", annoying$"2")) +
+  geom_point()
+# yeah this is annoying, warning issued but this works
+
+#3.
+annoying$"3" <- 2/1
+
+#4.
+annoying %>%
+  rename(one = 1,
+         two = 2,
+         three = 3
+         )
+```
+  
+5. What does tibble::enframe() do? When might you use it?
+*converts named atomic vectors or lists to one or two column data frames*
+*maybe you want to put a bunch of strings into a df b/c data was entered weirdly?*
+
+6. What option controls how many additional column names are printed at the footer of a tibble?
+*print() n_extra argument for printing tibble rows*
