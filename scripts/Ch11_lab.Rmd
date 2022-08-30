@@ -1,0 +1,259 @@
+---
+title: "Data import"
+author: "Holden Jones"
+date: '2022-08-28'
+output: html_document
+---
+
+# Data import
+
+
+--------------------------------------------------------------------------------
+# 11.1 Prerequisites
+
+Use the readr package which is part of the core tidyverse
+```{r}
+library(tidyverse)
+```
+
+
+--------------------------------------------------------------------------------
+# 11.2 Getting started
+
+Most readr functions turn flat files into data frames
+```{r}
+# can also supply inline csv file - important for reproducing code
+read_csv("a,b,c
+1,2,3
+4,5,6")
+# it's sensitive to line placement
+```
+
+Can skip comments or specific lines when reading inline csvs
+*can use \n to add a new line*
+
+## 11.2.1 Compared to base R
+
+readr much faster, produces tibbles instead of dataframes, more reproducible
+
+## 11.2.2 Exercises
+
+1. What function would you use to read a file where fields were separated with
+“|”?
+*read_delim()*
+
+2. Apart from file, skip, and comment, what other arguments do read_csv() and read_tsv() have in common?
+*lots of them, can use following code to get them*
+intersect(names(formals(read_csv)), names(formals(read_tsv)))
+
+3. What are the most important arguments to read_fwf()?
+*probably col_positions and col_types, but also locale - regional defaults*
+
+4. Sometimes strings in a CSV file contain commas. To prevent them from causing problems they need to be surrounded by a quoting character, like " or '. By default, read_csv() assumes that the quoting character will be ". What argument to read_csv() do you need to specify to read the following text into a data frame?
+test <- c(x,y\n1,'a,b')
+*specificy quote argument*
+```{r}
+x <- "x,y\n1,'a,b'"
+
+read_csv(x, quote = "'")
+```
+
+5. Identify what is wrong with each of the following inline CSV files. What happens when you run the code?
+*hard to tell b/c we don't know what they're going for here...*
+```{r}
+read_csv("a,b\n1,2,3\n4,5,6")
+read_csv("a,b,c\n1,2,3\n4,5,6") # added c column
+
+read_csv("a,b,c\n1,2\n1,2,3,4")
+read_csv("a,b,c,d\n1,2,,\n1,2,3,4") # added d column, put ,, for NAs 
+
+read_csv("a,b\n\"1")
+read_csv("a,b\n,,\n1") # fixed quotes, inserted second row, ,, for NAs
+
+read_csv("a,b\n1,2\na,b")
+read_csv("a,b\n1,2\n'a','b'") 
+# idk this looks good! but values have same value as columns so put ''
+
+read_csv("a;b\n1;3")
+read_csv("a,b\n1,3") # removed semicolon
+```
+
+
+--------------------------------------------------------------------------------
+# 11.3 Parsing a vector
+
+Little detour to talk about parse_*() functions - take a character vector and 
+return a more specialized vector like a logical, integer, or date
+```{r}
+str(parse_logical(c("TRUE", "FALSE", "NA")))
+#>  logi [1:3] TRUE FALSE NA
+str(parse_integer(c("1", "2", "3")))
+#>  int [1:3] 1 2 3
+str(parse_date(c("2010-01-01", "1979-10-14")))
+#>  Date[1:2], format: "2010-01-01" "1979-10-14"
+```
+
+parse functions are all uniform 
+- 1st argument is character vector to parse
+- na argument says what should we treat as missing
+
+8 different types of parsers
+
+## 11.3.1 Numbers
+
+3 problems with parsing a number
+- people write numbers differently; . or , for decimal
+- numbers surrounded by characters to provide context ie $, %
+- grouping characters to make easier to read (ie . or , for 1,000)
+
+locale notion - parsing options set by place. default is US-centric
+
+parse_number() to remove currency and other things, just get the number even if
+in text
+```{r}
+parse_number("$100")
+#> [1] 100
+parse_number("20%")
+#> [1] 20
+parse_number("It cost $123.45")
+#> [1] 123.45
+```
+
+## 11.3.2 Strings
+
+seems like parse_character() should be really simple - should just return its 
+input - but alas! many different ways to represent the same string
+
+need to dive into how computers represent strings
+```{r}
+charToRaw("Holden")
+```
+
+each hexadecimal number is represented by a byte of information
+readr uses UTF-8 system of encoding
+
+other languages may need other encoding systems, which can be specified in 
+parse_character
+```{r}
+#parse_character(x1, locale = locale(encoding = "Latin1"))
+#> [1] "El Niño was particularly bad this year"
+#parse_character(x2, locale = locale(encoding = "Shift-JIS"))
+#> [1] "こんにちは"
+```
+
+can also use guess_encoding - may take a few tries tho!
+
+# 11.3.3 Factors
+
+factors represent categorical variables with a known set of possible values
+if a value is outside an expected level will return an error
+*seems like the logic here is similar to excel formatting*
+```{r}
+fruit <- c("apple", "banana")
+parse_factor(c("apple", "banana", "bananana"), levels = fruit) # uh oh!
+```
+
+## 11.3.4 Dates, date-times, and times
+
+parse_datetime(), parse_date(), and hms::parse_time() each expect and give diff things
+use class from hms package for parsing times
+
+if non english language and using month names, can set lang via locale
+
+## 11.3.5 Exercises
+
+1. What are the most important arguments to locale()?
+*probably date_names and date_format to set language*
+
+2. What happens if you try and set decimal_mark and grouping_mark to the same character? What happens to the default value of grouping_mark when you set decimal_mark to “,”? What happens to the default value of decimal_mark when you set the grouping_mark to “.”?
+*decimal_mark and grouping_mark must be different, so default is for the other to be diff*
+```{r}
+locale(decimal_mark = ".", grouping_mark = ".")
+```
+
+3. I didn’t discuss the date_format and time_format options to locale(). What do they do? Construct an example that shows when they might be useful.
+*important in L.A. and military for example*
+```{r}
+dates <- c("30-08-2022", "07-08-2022")
+times <- c("14:47, ")
+
+# to see what default formats are
+locale()
+
+# can also change these to set custom parameters
+locale_custom <- locale(date_format = "Day %d Mon %M Year %y",
+                 time_format = "Sec %S Min %M Hour %H")
+date_custom <- c("Day 01 Mon 02 Year 03", "Day 03 Mon 01 Year 01")
+
+parse_date(date_custom)
+#> Warning: 2 parsing failures.
+#> row col   expected                actual
+#>   1  -- date like  Day 01 Mon 02 Year 03
+#>   2  -- date like  Day 03 Mon 01 Year 01
+#> [1] NA NA
+parse_date(date_custom, locale = locale_custom)
+#> [1] "2003-01-01" "2001-01-03"
+time_custom <- c("Sec 01 Min 02 Hour 03", "Sec 03 Min 02 Hour 01")
+parse_time(time_custom)
+#> Warning: 2 parsing failures.
+#> row col   expected                actual
+#>   1  -- time like  Sec 01 Min 02 Hour 03
+#>   2  -- time like  Sec 03 Min 02 Hour 01
+#> NA
+#> NA
+parse_time(time_custom, locale = locale_custom)
+#> 03:02:01
+#> 01:02:03
+```
+
+4. If you live outside the US, create a new locale object that encapsulates the settings for the types of file you read most commonly.
+*for Ecuador*
+```{r}
+locale() # check that default is US-centric
+
+parse_date("30/08/2022") # try with default, no work
+
+ecuador_locale <- locale( # set custom for EC
+  date_format = "%d/%m/%Y",
+)
+
+parse_date("30/08/2022", locale = ecuador_locale)
+# works!
+```
+
+5. What’s the difference between read_csv() and read_csv2()?
+*values are separated with ; instead of ,*
+
+6. What are the most common encodings used in Europe? What are the most common encodings used in Asia? Do some googling to find out.
+*Europe: ISO-8859, Asia: GB18030*
+
+7. Generate the correct format string to parse each of the following dates and times:
+```{r}
+d1 <- "January 1, 2010"
+parse_date(d1, "%B %d, %Y")
+
+d2 <- "2015-Mar-07"
+parse_date(d2, "%Y-%b-%d")
+
+d3 <- "06-Jun-2017"
+parse_date(d3, "%d-%b-%Y")
+
+d4 <- c("August 19 (2015)", "July 1 (2015)")
+parse_date(d4, "%B %d (%Y)")
+
+d5 <- "12/30/14" # Dec 30, 2014
+parse_date(d5, "%m/%d/%y")
+
+t1 <- "1705"
+parse_time(t1, "%H%M")
+
+t2 <- "11:15:10.12 PM"
+parse_time(t2, "%I:%M:%M.%S %p")
+```
+
+
+--------------------------------------------------------------------------------
+# 11.4 Parsing a file
+
+## RESUME HERE
+
