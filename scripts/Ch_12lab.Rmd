@@ -1,0 +1,250 @@
+---
+title: "Ch12_lab"
+author: "Holden Jones"
+date: '2022-09-02'
+output: html_document
+---
+
+# Tidy data
+
+
+--------------------------------------------------------------------------------
+# 12.1 Introduction
+
+we'll learn a consistent way to organise data in R - called tidy data
+more info in Tidy Data paper http://www.jstatsoft.org/v59/i10/paper
+
+## 12.1.1
+
+tidyr is in tidyverse
+```{r}
+library(tidyverse)
+```
+
+
+--------------------------------------------------------------------------------
+# 12.2 Tidy data
+
+lots of ways to represent data in table form - but only the tidy dataset will be
+best to work with in tidyverse! muah ha ha!
+
+Rules for a tidy dataset:
+1. Each variable much have its own column
+2. Each observation must have its own row
+3. Each value must have its own cell
+
+even simpler set of instructions:
+1. Put each dataset in a tibble
+2. Put each variable in a column
+
+Two main advantages for ensuring data is tidy:
+1. General advantage for picking one consistent way of storing data. Learn the
+tools that work for that data structure and stick with em!
+2. Specific advantage to sticking variables in columns because it allows R's
+vectorized nature to shine. Most built-in R functions work with vectors
+of values, making transforming tidy data feel particularly natural.
+
+## 12.2.1 Exercises
+
+1. Using prose, describe how the variables and observations are organised in each of the sample tables.
+*1 - each variable has a column, each observation has a row*
+*2 - case and population should have their own columns, each observation has multiple rows - ex. Brazil 1999 should just be one year*
+*3 - rate is really a combo of two variables but each observation is in its own row which is a start I guess!*
+*4 - easier to have these in the same table*
+
+2. Compute the rate for table2, and table4a + table4b. You will need to perform four operations:
+
+- Extract the number of TB cases per country per year.
+- Extract the matching population per country per year.
+- Divide cases by population, and multiply by 10000.
+- Store back in the appropriate place.
+- Which representation is easiest to work with? Which is hardest? Why?
+```{r}
+# calculate rate for table 2
+table2a <- table2 %>%
+  group_by(country, year) %>%
+  mutate(rate = count[type == 'cases'] / count[type == 'population']
+  )
+# this provides duplicate rates - 1 each for cases and population rows
+
+# calculate rate for table4a + table4b
+# from answers
+table4c <-
+  tibble(
+    country = table4a$country,
+    `1999` = table4a[["1999"]] / table4b[["1999"]] * 10000,
+    `2000` = table4a[["2000"]] / table4b[["2000"]] * 10000
+  )
+
+table4c
+# I like this approach - build out a 3rd dataframe instead of manipulating existing ones
+```
+
+3. Recreate the plot showing change in cases over time using table2 instead of table1. What do you need to do first?
+*1st need to remove population rows, filter them out and use a smaller df*
+```{r}
+# ggplot code using tidy table1
+ggplot(table1, aes(year, cases)) + 
+  geom_line(aes(group = country), colour = "grey50") + 
+  geom_point(aes(colour = country))
+
+# filter out pop, then plot
+table2 %>%
+  filter(type == 'cases') %>%
+  ggplot(aes(year, count)) +
+  geom_line(aes(group = country), color = "grey49") +
+  geom_point(aes(color = country)) +
+  labs(y = 'cases')
+```
+
+
+--------------------------------------------------------------------------------
+# 12.3 Pivoting
+
+Unfortunately most data is untidy
+
+Tidying - first steps: what are the observations and variables? Then, resolve one
+of two common problems.
+- one variable might be spread across multiple columns
+- one observation might be scattered across multiple rows
+to fix these use two most important tidyr functions: pivot_longer() and pivot_wider()
+
+## 12.3.1 Longer
+
+example, table4a each row has two observations (1 for each year), not one! 
+
+to tidy, need to pivot offending columns into a new pair of variables, we need
+three parameters to do so
+- set of columns whose names are values not variables
+- name of variable to move column names to - in above example it is year
+- name of variable to move column name values to - in above example it is cases
+*surround non-syntactic column names in `` - backticks!*
+```{r}
+table4a_long <- table4a %>% 
+  pivot_longer(c(`1999`, `2000`), names_to = "year", values_to = "cases")
+# wow this code is pretty straightforward!
+
+# and same thing with table4b
+table4b_long <- table4b %>%
+  pivot_longer(c(`1999`, `2000`), names_to = "year", values_to = "population")
+
+left_join(table4a_long, table4b_long)
+```
+
+pivet_longer() makes datasets longer by reducing number of columns
+
+## 12.3.2 Wider
+
+pivot_wider() is opposite of pivot_longer() - use when an observation is scattered across rows
+
+example, table 2 - each country and year is spread across two rows
+to tidy this up, first analyse representation similar to pivot_longer(), but only
+need two parameters:
+- column to take variable names from - here it's type
+- column to take values from - here it's count
+```{r}
+table2 %>%
+  pivot_wider(names_from = year, values_from = count)
+# columns not in "" b/c already in dataframe
+```
+
+pivot_wider() makes long tables shorter and wider, it is a 
+compliment to pivot_longer()
+
+## 12.3.3 Exercises
+
+1. Why are pivot_longer() and pivot_wider() not perfectly symmetrical?
+Carefully consider the following example:
+(Hint: look at the variable types and think about column names.)
+pivot_longer() has a names_ptypes argument, e.g.  names_ptypes = list(year = double()). What does it do?
+*not symmetrical b/c pivot_longer() creates new columns and pivot_wider() uses columns that are already created and replaces them*
+*hmm, also originally variables are in double form, and after converted back from pivot_longer, year is in chr form*
+
+from answers:
+*pivot_wider() loses column type information - always makes them into characters*
+*use the names_transform argument to pivot_longer(), which provides a function to coerce the column to a different data type*
+```{r}
+stocks <- tibble(
+  year   = c(2015, 2015, 2016, 2016),
+  half  = c(   1,    2,     1,    2),
+  return = c(1.88, 0.59, 0.92, 0.17)
+)
+
+# this code shows that the two are reversible tho! except for variable types! can see how that is important
+stocks %>% 
+  pivot_wider(names_from = year, values_from = return) %>% 
+  pivot_longer(`2015`:`2016`, names_to = "year", values_to = "return")
+```
+
+2. Why does this code fail?
+*the year columns aren't recognized b/c they are numerical and not common column names - need ``*
+*in this case, pivot_longer trying to find the 1999th and 2000th columns, which obvi don't exist in this small df!*
+```{r}
+# error in loc_validate() - can't find columns
+table4a %>% 
+  pivot_longer(c(1999, 2000), names_to = "year", values_to = "cases")
+
+# appropriately define numerical columns
+table4a %>% 
+  pivot_longer(c(`1999`, `2000`), names_to = "year", values_to = "cases")
+```
+
+3. What would happen if you widen this table? Why? How could you add a new column to uniquely identify each value?
+*issue likely from there being multiple entries for age per person - yep, warning: values not uniquely identified, output contains list-cols*
+*with unique combo of name and obs, we can do pivot_wider()! Had to add this column in*
+```{r}
+# woah, interesting formatting here!
+people <- tribble(
+  ~name,             ~names,  ~values,
+  #-----------------|--------|------
+  "Phillip Woods",   "age",       45,
+  "Phillip Woods",   "height",   186,
+  "Phillip Woods",   "age",       50,
+  "Jessica Cordero", "age",       37,
+  "Jessica Cordero", "height",   156
+)
+
+# pivot_wider on og
+people %>% 
+  pivot_wider(names_from = names, values_from = values)
+
+# from answers - add row with distinct observation count for each combo of name and key
+people2 <- people %>%
+  group_by(name, names) %>%
+  mutate(obs = row_number())
+people2
+
+# pivot_wider on people2
+people2 %>% 
+  pivot_wider(names_from = names, values_from = values)
+```
+
+4. Tidy the simple tibble below. Do you need to make it wider or longer? What are the variables?
+*variables are sex, and if pregnant or not, need to make longer*
+```{r}
+preg <- tribble(
+  ~pregnant, ~male, ~female,
+  "yes",     NA,    10,
+  "no",      20,    12
+)
+
+preg %>%
+  pivot_longer(c(male,female), names_to = "sex", values_to = "number", 
+               values_drop_na = TRUE) # can drop male preg row
+# this is an example of turning explicit missing value to implicit missing
+```
+
+
+--------------------------------------------------------------------------------
+# 12.4. Missing values
+##RESUME HERE
+
+
+
+
+
+
+
+
+
+
