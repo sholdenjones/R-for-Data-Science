@@ -181,8 +181,8 @@ stocks %>%
 *in this case, pivot_longer trying to find the 1999th and 2000th columns, which obvi don't exist in this small df!*
 ```{r}
 # error in loc_validate() - can't find columns
-table4a %>% 
-  pivot_longer(c(1999, 2000), names_to = "year", values_to = "cases")
+#table4a %>% 
+  #pivot_longer(c(1999, 2000), names_to = "year", values_to = "cases")
 
 # appropriately define numerical columns
 table4a %>% 
@@ -332,11 +332,96 @@ tibble(x = c("X1", "X20", "AA11", "AA2")) %>%
 ```
 
 # 12.5 Missing values
-##RESUME
+
+data can be explicitly or implicitly missing (NA or just absent)
+
+One way to think about the difference is with this Zen-like koan: An explicit 
+missing value is the presence of an absence; an implicit missing value is the 
+absence of a presence.
+
+ex:
+```{r}
+stocks <- tibble(
+  year   = c(2015, 2015, 2015, 2015, 2016, 2016, 2016),
+  qtr    = c(   1,    2,    3,    4,    2,    3,    4),
+  return = c(1.88, 0.59, 0.35,   NA, 0.92, 0.17, 2.66)
+)
+
+# can pivot to make implicit missing values explicit
+stocks %>% 
+  pivot_wider(names_from = year, values_from = return)
+
+# can turn back to longer, make explicit missings back to implicit
+# with values_drop_na
+stocks %>% 
+  pivot_wider(names_from = year, values_from = return) %>% 
+  pivot_longer(
+    cols = c(`2015`, `2016`), 
+    names_to = "year", 
+    values_to = "return", 
+    values_drop_na = TRUE
+  )
+```
+
+Another important tool for making missing values explicit in tidy data is complete():
+complete() takes all unique combos of sets of columns and fills in missing ones
+with NAs
+
+Also fill if previous entries need to be filled in
+```{r}
+# complete()
+stocks %>% 
+  complete(year, qtr)
+
+# fill()
+treatment <- tribble(
+  ~ person,           ~ treatment, ~response,
+  "Derrick Whitmore", 1,           7,
+  NA,                 2,           10,
+  NA,                 3,           9,
+  "Katherine Burke",  1,           4
+)
+
+treatment %>% 
+  fill(person)
+```
+
+## 12.5.1 Exercises
+
+1. Compare and contrast the fill arguments to pivot_wider() and complete().
+*fill seems pretty simple, pivot_wider()
+*pivot_longer creates more rows, separates out observations if multiple stored in single column, can make explicit missing data implicit*
+*pivot_wider creates more columns, separating out variables if one observation spread across multiple rows, makes implicit missing data explicit*
+*fill fills in missing data with actual data*
+
+2. What does the .direction argument to fill() do?
+*fill based on should values be copied up or down?*
+```{r}
+treatment %>% 
+  fill(person, .direction = "down")
+
+treatment %>% 
+  fill(person, .direction = "up")
+```
 
 
+# 12.6 Case Study
 
+The tidyr::who dataset contains tuberculosis (TB) cases broken down by year, 
+country, age, gender, and diagnosis method. The data comes from the 2014 World 
+Health Organization Global Tuberculosis Report, available at
+http://www.who.int/tb/country/data/download/en/.
 
+who is typical dataset - messy!
+*1st thoughts - pivot_wider() for year, what are all these columns? iso2 and iso3 seem redundant*
+```{r}
+who
+```
+
+To start, gather columns that are not variables
+- seems like country, that's an observation!
+
+## RESUME HERE
 
 
 
