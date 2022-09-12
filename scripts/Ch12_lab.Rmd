@@ -419,15 +419,190 @@ who
 ```
 
 To start, gather columns that are not variables
-- seems like country, that's an observation!
+- seems like lots of the columns are values not variables
+- country, iso2, iso3 redudantly specify the country
+- year is clearly a variable
 
-## RESUME HERE
+gather together columns from new_sp_m014 to newrel_f65
+do this with pivot_longer(), new column called key
+```{r}
+who1 <- who %>%
+  pivot_longer(
+    new_sp_m014:newrel_f65,
+    names_to = "key",
+    values_to = "cases",
+    values_drop_na = TRUE
+  )
 
+# dig into what the values in this key column are
+who1 %>%
+  count(key)
+```
 
+luckily we have data dictionary handy, which says:
+- 1st 3 letters if new or old case of TB
+- next 2 letters type of TB
+- 6th letter sex of TB patient
+- remaining numbers give age group of patient
 
+need to fix some data input errors - newrel changed to new_rel
+string mutate
+```{r}
+who2 <- who1 %>% 
+  mutate(key = stringr::str_replace(key, "newrel", "new_rel"))
 
+who2
 
+# separate values with separate()
+who3 <- who2 %>% 
+  separate(key, c("new", "type", "sexage"), sep = "_")
 
+who3
 
+# drop new b/c constant in dataset
+who3 %>%
+  count(new)
 
+who4 <- who3 %>%
+  select(-new, -iso3)
 
+who4
+
+# separate sexage into sex and age by splitting after 1st char
+who5 <- who4 %>%
+  separate(sexage, c("sex", "age"), sep = 1)
+
+who5
+```
+
+Woohoo! who dataset is not tidy!
+irl would use a complex pipe to work through this:
+```{r}
+who5 <- who %>%
+  pivot_longer(
+    cols = new_sp_m014:newrel_f65, 
+    names_to = "key", 
+    values_to = "cases", 
+    values_drop_na = TRUE
+  ) %>% 
+  mutate(
+    key = stringr::str_replace(key, "newrel", "new_rel")
+  ) %>%
+  separate(key, c("new", "var", "sexage")) %>% 
+  select(-new, -iso3) %>% # keeping iso2 for graph below
+  separate(sexage, c("sex", "age"), sep = 1)
+```
+
+## 12.6.1 Exercises
+
+1. In this case study I set values_drop_na = TRUE just to make it easier to check 
+that we had the correct values. Is this reasonable? Think about how missing values 
+are represented in this dataset. Are there implicit missing values? What’s the 
+difference between an NA and zero?
+*values_drop_na = TRUE drops missing values. I think this is reasonable, but I suppose the difference here is that 0 means they looked and there weren't any cases in that group, whereas an NA means there isn't data. So these are different!*
+
+*0 is used to represent no cases of TB.*
+*Explicit missing values (NAs) are used to represent missing data for (country, year) combinations in which the country existed in that year.*
+*Implicit missing values are used to represent missing data because a country did not exist in that year.*
+```{r}
+# from answers:
+
+# can see if all values in a country are missing
+pivot_longer(who, c(new_sp_m014:newrel_f65), names_to = "key", values_to = "cases") %>%
+  group_by(country, year) %>%
+  mutate(prop_missing = sum(is.na(cases)) / n()) %>%
+  filter(prop_missing > 0, prop_missing < 1)
+
+# also check for implicit missing values
+nrow(who)
+
+who %>% 
+  complete(country, year) %>%
+  nrow()
+# yes there are over 200 missing year and country combinations
+
+# cool, use anit_join() introduced later to see what these missing combos are
+anti_join(complete(who, country, year), who, by = c("country", "year")) %>% 
+  select(country, year) %>% 
+  group_by(country) %>% 
+  # so I can make better sense of the years
+  summarise(min_year = min(year), max_year = max(year))
+# these combos that are missing are from before these countries were created!
+```
+
+2. What happens if you neglect the mutate() step? 
+(mutate(names_from = stringr::str_replace(key, "newrel", "new_rel")))
+*if we don't mutate then newrel will stay, which means it won't get separated consistently*
+
+*The separate() function emits the warning “too few values”. If we check the rows for keys beginning with "newrel_", we see that sexage is missing, and type = m014.* - answers
+```{r}
+who3a <- who1 %>%
+  separate(key, c("new", "type", "sexage"), sep = "_")
+
+filter(who3a, new == "newrel") %>% head()
+```
+
+3. I claimed that iso2 and iso3 were redundant with country. Confirm this claim.
+*confirmed! only one unique value for each for each country*
+```{r}
+# only one iso2 for each country
+who %>%
+  group_by(country, iso2) %>%
+  summarise(unique_iso2 = n_distinct(iso2)) %>%
+  filter(!unique_iso2 == 1)
+
+# only one iso3 for each country
+who %>%
+  group_by(country, iso3) %>%
+  summarise(unique_iso3 = n_distinct(iso3)) %>%
+  filter(!unique_iso3 == 1)
+```
+
+4. For each country, year, and sex compute the total number of cases of TB. 
+Make an informative visualisation of the data.
+*my plots*
+```{r}
+# I don't think this is what they want as the data is already presented like this:
+who5 %>%
+  group_by(country, year, sex)
+
+# 1st by country
+who5 %>%
+  group_by(iso2) %>%
+  summarise(total = sum(cases)) %>%
+  mutate(iso2 = fct_reorder(iso2, as.integer(total))) %>% # reorder to display better
+  filter(total >= 100000) %>% # filter only higher case countries
+  ggplot(aes(iso2, total)) +
+  geom_boxplot() +
+  xlab("Country") +
+  ylab("Tb Cases")
+
+# then by year
+who5 %>%
+  group_by(year) %>%
+  summarise(total = sum(cases)) %>%
+  ggplot(aes(year, total)) +
+  geom_point()
+
+# then by sex
+who5 %>%
+  group_by(sex) %>%
+  summarise(total = sum(cases)) %>%
+  ggplot(aes(sex, total, fill = sex)) +
+  geom_col() +
+  theme(legend.position="none") +
+  xlab("Sex") +
+  ylab("Tb Cases")
+```
+
+*answers plots:*
+```{r}
+# interesting, they interpreted it as I had originally done!
+who5 %>%
+  group_by(country, year, sex) %>%
+  filter(year > 1995) %>%
+  summarise(cases = sum(cases)) %>%
+  unite(country_sex, country, sex, remove = FALSE) %>%
+  ggplot(aes(x = year, y = cases, group = country_sex, colour = sex)) +
+  geom_line()
+```
