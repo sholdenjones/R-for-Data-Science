@@ -1,0 +1,104 @@
+---
+title: "Ch_13_lab"
+author: "Holden Jones"
+date: '2022-09-13'
+output: html_document
+---
+
+# Relational Data
+
+
+--------------------------------------------------------------------------------
+# 13.1 Introduction
+
+multiple tables of data are called relational data - b/c the realtions are 
+important
+
+need verbs that work with pairs of tables, 3 families of verbs for this:
+- mutating joins - add new variables to one df from matching obs in another
+- filtering joins - filter obs from one df based on whether they match obs in
+                    other table
+- set operations - treat obs as if they were set elements
+
+relational data most often found in a relational database management system
+or RDBMS - SQL usually used for this!
+
+generally, dplyr a little easier to use than SQL but more focused on data
+analysis
+
+## 13.1.1 Prerequisites
+```{r}
+library(tidyverse)
+library(nycflights13)
+
+# from answers
+library("viridis")
+```
+
+
+--------------------------------------------------------------------------------
+# 13.2 nycflights13
+
+4 tibbles related to the flights table
+- airlines
+- airports
+- planes
+- weather
+
+can show relationship between tables with a drawing!
+practice with my ranas data
+
+## 13.2.1 Exercises
+
+1. Imagine you wanted to draw (approximately) the route each plane flies from 
+its origin to its destination. What variables would you need? What tables 
+would you need to combine?
+*need location of origin and dest airports, the planes that fly between them, so combine flights and airports*
+```{r}
+# from answers
+flights_latlon <- flights %>%
+  inner_join(select(airports, origin = faa, origin_lat = lat, origin_lon = lon),
+    by = "origin"
+  ) %>%
+  inner_join(select(airports, dest = faa, dest_lat = lat, dest_lon = lon),
+    by = "dest"
+  )
+
+flights_latlon %>%
+  slice(1:100) %>%
+  ggplot(aes(
+    x = origin_lon, xend = dest_lon,
+    y = origin_lat, yend = dest_lat
+  )) +
+  borders("state") +
+  geom_segment(arrow = arrow(length = unit(0.1, "cm"))) +
+  coord_quickmap() +
+  labs(y = "Latitude", x = "Longitude")
+```
+
+2. I forgot to draw the relationship between weather and airports. What is 
+the relationship and how should it appear in the diagram?
+*they connect via airport full name and weather origin code - so would need to fix these so that they overlap before joining / binding*
+
+3. weather only contains information for the origin (NYC) airports. If it
+contained weather records for all airports in the USA, what additional relation
+would it define with flights?
+*if it also had weather data for all US airports it would link to dest as well*
+
+4. We know that some days of the year are “special”, and fewer people than usual
+fly on them. How might you represent that data as a data frame? What would be 
+the primary keys of that table? How would it connect to the existing tables?
+*hmm, for special days, would want several weather columns from weather and year month day from flights, and number of flights from a flights group_by*
+
+
+--------------------------------------------------------------------------------
+# 13.3 Keys
+
+## RESUME HERE
+
+
+
+
+
+
+
