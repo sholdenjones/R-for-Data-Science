@@ -94,11 +94,90 @@ the primary keys of that table? How would it connect to the existing tables?
 --------------------------------------------------------------------------------
 # 13.3 Keys
 
-## RESUME HERE
+variables used to connect tables - keys!
+- primary - uniquely identifies an observation in its own table
+- foreign - uniquely identifies an observation in another table
 
+a variable can be both at the same time
 
+identify primary keys first, good practice to count() them
+```{r}
+planes %>% 
+  count(tailnum) %>% 
+  filter(n > 1)
 
+weather %>% 
+  count(year, month, day, hour, origin) %>% 
+  filter(n > 1)
+```
 
+sometimes a table won't have an explicit primary key
+```{r}
+flights %>% 
+  count(year, month, day, tailnum) %>% 
+  filter(n > 1)
+# planes can fly more than once per day!
+```
 
+if a table lacks a key, can add one with mutate() and row_number(), this is a
+surrogate key
+
+## 13.3.1 Exercises
+
+1. Add a surrogate key to flights.
+```{r}
+flights <- flights %>%
+  mutate(flight = row_number())
+
+# check that key works here:
+flights %>%
+  count(flight) %>%
+  filter(n > 1)
+```
+
+2. Identify the keys in the following datasets
+Lahman::Batting,
+babynames::babynames
+nasaweather::atmos
+fueleconomy::vehicles
+ggplot2::diamonds
+```{r}
+#
+library(Lahman)
+Batting %>%
+  count(playerID, yearID, stint) %>%
+  filter(n > 1)
+
+library(babynames)
+babynames %>%
+  count(year, sex, name) %>%
+  filter(n >1)
+
+nasaweather::atmos %>%
+  count(lat, long, year, month) %>%
+  filter(n > 1)
+
+fueleconomy::vehicles %>%
+  count(id) %>%
+  filter(n > 1)
+
+library(ggplot2)
+diamonds %>%
+  count(carat, price, depth, table, x, y, z) %>%
+  filter(n > 1)
+# there is no primary key! so lets make a surrogate
+
+diamonds %>%
+  mutate(row = row_number()) %>% # this will be surrogate
+  count(row) %>%
+  filter(n > 1)
+```
+
+## RESUME
+3. Draw a diagram illustrating the connections between the
+Batting, People, and Salaries tables in the Lahman package. 
+Draw another diagram that shows the relationship between People,
+Managers, AwardsManagers. How would you characterise the
+relationship between the Batting, Pitching, and Fielding tables?
 
 
