@@ -173,11 +173,25 @@ diamonds %>%
   filter(n > 1)
 ```
 
-## RESUME
 3. Draw a diagram illustrating the connections between the
 Batting, People, and Salaries tables in the Lahman package. 
 Draw another diagram that shows the relationship between People,
 Managers, AwardsManagers. How would you characterise the
 relationship between the Batting, Pitching, and Fielding tables?
+*Batting - People linked by playerID*
+*Batting - Salaries linked by playerID, teamID, yearID*
+*People - Salaries linked by playerID*
+
+*People - Managers linked by playerID*
+*People - AwardsManagers linked by playerID*
+*Managers - AwardsManagers linked by playerID, yearID*
+
+*the batting pitching and fielding tables seem pretty easily transferrable - all linked to each other by playerID, yearID, stint, but fielding also needs POS!!!!*
+
+
+--------------------------------------------------------------------------------
+# 13.4 Mutating joins
+
+## RESUME HERE
 
 
