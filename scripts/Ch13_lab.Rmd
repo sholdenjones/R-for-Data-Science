@@ -192,6 +192,157 @@ relationship between the Batting, Pitching, and Fielding tables?
 --------------------------------------------------------------------------------
 # 13.4 Mutating joins
 
-## RESUME HERE
+mutating join - combine variables from two tables
+work with smaller dataframe to make easier
+```{r}
+flights2 <- flights %>% 
+  select(year:day, hour, origin, dest, tailnum, carrier)
+
+flights2 %>%
+  select(-origin, -dest) %>% 
+  left_join(airlines, by = "carrier")
+# brings in all of airlines df - so adds name column
+```
+
+could also do this with R's base subsetting, but mutate_join is cleaner
+
+## 13.4.1 Understanding joins
+
+key variable used to match rows between tables, the value column(s) come along
+for the ride
+```{r}
+x <- tribble(
+  ~key, ~val_x,
+     1, "x1",
+     2, "x2",
+     3, "x3"
+)
+y <- tribble(
+  ~key, ~val_y,
+     1, "y1",
+     2, "y2",
+     4, "y3"
+)
+```
+
+## 13.4.2 Inner join
+
+simplest type of join - pairs matched whenever their keys are equal
+most important property is that unmatched rows are not included in resulting df
+- usually not appropriate for analysis b/c too easy to lose observations
+
+The output of an inner join is a new data frame that contains the key, the x 
+values, and the y values. We use by to tell dplyr which variable is the key:
+```{r}
+x %>% 
+  inner_join(y, by = "key")
+```
+
+## 13.4.3 Outer joins
+
+outer join keeps observations that apear in at least one of the tables, 3 types:
+- left join keeps all obs in x
+- right join keeps all obs in y
+- full join keeps all obs in x and y
+these joins add an additional "virtual" obs that always matches if no other does
+
+*left join should be default join - preserves original obs even without a match*
+
+but sometimes keys don't uniquely identify an obs...
+
+## 13.4.4 Duplicate keys
+
+so far all have assumed that keys are unique, but this not always the case,
+2 possibilities:
+
+1. one table has duplicate keys - useful when want to add in additional info as 
+    there typically is a one to many relationship, so key can be primary in one 
+    table and foreign in the other
+```{r}
+x <- tribble(
+  ~key, ~val_x,
+     1, "x1",
+     2, "x2",
+     2, "x3",
+     1, "x4"
+)
+y <- tribble(
+  ~key, ~val_y,
+     1, "y1",
+     2, "y2"
+)
+left_join(x, y, by = "key")
+```
+
+2. both tables have duplicate keys - usually an error b/c in neither do keys
+    uniquely ID an observation, joining gets all possible combos, Cartesian product
+*duplicate keys are super bad!!!*
+```{r}
+x <- tribble(
+  ~key, ~val_x,
+     1, "x1",
+     2, "x2",
+     2, "x3",
+     3, "x4"
+)
+y <- tribble(
+  ~key, ~val_y,
+     1, "y1",
+     2, "y2",
+     2, "y3",
+     3, "y4"
+)
+left_join(x, y, by = "key")
+```
+
+## 13.4.5 Defining the key columns
+
+by="key", can use other values for by to connect tables in other ways:
+- default is by = NULL, uses all vars that appear in both tables - a
+    natural join
+- char vector, by = "x" - like a natural join but uses only some of common vars
+- named char vector, by = c("a" = "b"). matches variable a in table x to var b
+    in table y, variables from x will be used in output
+```{r}
+flights2 %>% 
+  left_join(airports, c("dest" = "faa"))
+```
+
+## 13.4.6 Exercises
+
+1. Compute the average delay by destination, then join on the airports data frame 
+so you can show the spatial distribution of delays. Here’s an easy way to draw a 
+map of the United States:
+```{r}
+avg_delay_dest <- flights %>%
+  group_by(dest) %>%
+  summarise(avg_delay = mean(arr_delay, na.rm = TRUE)) %>%
+  inner_join(airports, by = c(dest = "faa"))
+
+avg_delay_dest %>%
+  ggplot(aes(lon, lat)) +
+  borders("state") +
+  geom_point(aes(color = avg_delay)) +
+  coord_quickmap()
+```
+
+2. Add the location of the origin and destination (i.e. the lat and lon) to flights.
+definitely can make this cleaner! I bet someone can do this with 3 lines
+```{r}
+flights_loc <- flights %>%
+  left_join(airports, c("dest" = "faa")) %>%
+  mutate(dest_lat = lat,
+         dest_lon = lon) %>%
+  select(-c("name", "alt", "tz", "dst", "tzone","lat", "lon")) %>%
+  left_join(airports, c("origin" = "faa")) %>%
+  mutate(origin_lat = lat,
+         origin_lon = lon) %>%
+  select(-c("name", "alt", "tz", "dst", "tzone", "lat", "lon"))
+```
+
+3. Is there a relationship between the age of a plane and its delays?
+
+##RESUME HERE
+
 
 
