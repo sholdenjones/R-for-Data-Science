@@ -341,8 +341,67 @@ flights_loc <- flights %>%
 ```
 
 3. Is there a relationship between the age of a plane and its delays?
+*delays peak with 10 year old planes! But older ones it decreases, interesting*
+```{r}
+flights_planes <- flights %>%
+  left_join(planes, by = "tailnum") %>%
+  mutate(age = year.x - year.y) %>%
+  filter(!is.na(age)) %>%
+  group_by(age) %>%
+  mutate(avg_delay = mean(arr_delay, na.rm = TRUE))
 
-##RESUME HERE
+flights_planes %>%
+  ggplot(aes(age, avg_delay)) +
+  geom_point()
+```
 
+4. What weather conditions make it more likely to see a delay?
+*wind speed increases length of delay although only up to 35 mph, maybe flights get cancelled at this point*
+*precipitation also increases length of delay*
+```{r}
+# first need to make hour column before joining flights and weather
+# LOL! This is awesome, but there already is an hour column in flights haha
+
+# wind_speed looking at length of delay
+flights %>%
+  separate(dep_time, into = c("hour", "minute"), sep = -2, convert = TRUE) %>%
+  left_join(weather, by = c("origin", "year", "month", "day", "hour")) %>%
+  group_by(wind_speed) %>%
+  mutate(avg_delay = mean(arr_delay, na.rm = TRUE)) %>%
+  ggplot(aes(wind_speed, avg_delay)) +
+   geom_point()
+
+# precip looking at length of delay
+flights %>%
+  separate(dep_time, into = c("hour", "minute"), sep = -2, convert = TRUE) %>%
+  left_join(weather, by = c("origin", "year", "month", "day", "hour")) %>%
+  group_by(precip) %>%
+  mutate(avg_delay = mean(arr_delay, na.rm = TRUE)) %>%
+  ggplot(aes(precip, avg_delay)) +
+   geom_point() +
+  geom_line()
+```
+
+5. What happened on June 13 2013? Display the spatial pattern of delays, and then 
+use Google to cross-reference with the weather.
+*there were a lot of delays on June 13th, 2013! the 2nd highest avg delay of any one day*
+*bestreme thunderstorms!!!*
+```{r}
+flights %>%
+  left_join(weather, by = c("origin", "year", "month", "day", "hour")) %>%
+  group_by(year, month, day) %>%
+  mutate(avg_delay = mean(arr_delay, na.rm = TRUE)) %>%
+  ggplot(aes(time_hour.x, avg_delay)) +
+   geom_point()
+
+flights %>%
+  left_join(weather, by = c("origin", "year", "month", "day", "hour")) %>%
+  group_by(year, month, day) %>%
+  summarise(avg_delay = mean(arr_delay, na.rm = TRUE)) %>%
+  arrange(desc(avg_delay))
+```
+
+
+## RESUME 13.4.7
 
 
