@@ -547,3 +547,50 @@ planes_carriers %>%
   filter(n > 1) %>%
   nrow()
 ```
+
+
+--------------------------------------------------------------------------------
+# 13.6 Join problems
+
+things to do with data to make joins go smoothly:
+1. identify primary keys for each table - do this with understanding of data
+2. check that none of primary key variables are missing - if they are then can't
+    match an observation!
+3. check that foreign keys match primary keys in another table. best way to do this
+    is with anti_join(). if they don't match it's a lot of work to fix them
+
+don't just check number of rows to make sure joins went smoothly 
+
+
+--------------------------------------------------------------------------------
+# 13.7 Set operations
+
+final type of two-table verbs - used least frequently:
+- intersect(x, y): return only observations in both x and y.
+- union(x, y): return unique observations in x and y.
+- setdiff(x, y): return observations in x, but not in y.
+
+*can be useful when breaking complex filter into multiple parts*
+
+work with complete rows, comparing outputs of each variable
+```{r}
+df1 <- tribble(
+  ~x, ~y,
+   1,  1,
+   2,  1
+)
+df2 <- tribble(
+  ~x, ~y,
+   1,  1,
+   1,  2
+)
+
+intersect(df1, df2)
+# so returns the one complete row in both dfs
+
+union(df1, df2)
+# all unique rows across both dfs
+
+setdiff(df1, df2)
+# return one row which is unique to df1 and not in df2
+```
