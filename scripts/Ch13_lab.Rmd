@@ -401,7 +401,99 @@ flights %>%
   arrange(desc(avg_delay))
 ```
 
+## 13.4.7 Other implimentations
 
-## RESUME 13.4.7
+better to use dplyr than base r b/c more specific
+dplyr joining verbs comes from SQL logic
+
+
+--------------------------------------------------------------------------------
+# 13.5 Filtering joins
+
+match observations same way as mutating joins but affect obs not vars
+2 types:
+- semi_join(x,y) - keeps all obs in x that have a match in y
+- anti_join(x,y) - drops all obs in x that have a match in y
+
+*cool, so semi_join acts as a filter against the x df*
+```{r}
+# top 10 dest in flights
+top_dest <- flights %>%
+  count(dest, sort = TRUE) %>%
+  head(10)
+
+# which ind flights go to these dest?
+flights %>% 
+  semi_join(top_dest)
+```
+
+*anti_join is the inverse of semi_join*
+useful for diagnosing join mismatches
+```{r}
+# this shows flights that aren't matched in planes
+flights %>%
+  anti_join(planes, by = "tailnum") %>%
+  count(tailnum, sort = TRUE)
+```
+
+## 13.5.1 Exercises
+
+1. What does it mean for a flight to have a missing tailnum? What do the tail 
+numbers that don’t have a matching record in planes have in common? (Hint: one 
+variable explains ~90% of the problems.)
+*expect that some cancelled flights won't have tailnum associated*
+*also seems to be something weird going on with N tailnum planes*
+```{r}
+# all planes are in flights
+planes %>%
+  anti_join(flights, by = "tailnum")
+
+# but not all flights are in planes
+flights %>%
+  anti_join(planes, by = "tailnum")
+
+# most of the tail numbers without matching record in planes start with N
+flights %>%
+  anti_join(planes, by = "tailnum") %>%
+  count(tailnum, sort = TRUE)
+
+# these are all type fixed wing multi engine
+planes %>%
+  filter(str_detect(tailnum, "N"))
+```
+
+2. Filter flights to only show flights with planes that have flown at least 100 
+flights.
+```{r}
+flights %>%
+  filter(!is.na(tailnum)) %>%
+  group_by(tailnum) %>%
+  mutate(n = n()) %>%
+  filter(n >= 100)
+```
+
+3. Combine fueleconomy::vehicles and fueleconomy::common to find only the records 
+for the most common models.
+```{r}
+library(fueleconomy)
+
+# semi_join of vehicles using make and model of common
+vehicles %>%
+  semi_join(common, by = c("make", "model"))
+```
+
+4. Find the 48 hours (over the course of the whole year) that have the worst 
+delays. Cross-reference it with the weather data. Can you see any patterns?
+```{r}
+
+```
+
+
+5. What does anti_join(flights, airports, by = c("dest" = "faa")) tell you? 
+What does anti_join(airports, flights, by = c("faa" = "dest")) tell you?
+
+6. You might expect that there’s an implicit relationship between plane and 
+airline, because each plane is flown by a single airline. Confirm or reject 
+this hypothesis using the tools you’ve learned above.
 
 
