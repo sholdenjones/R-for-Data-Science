@@ -1,0 +1,43 @@
+---
+title: "Ch14_lab"
+author: "Holden Jones"
+date: '2022-09-28'
+output: html_document
+---
+
+# Strings
+
+
+--------------------------------------------------------------------------------
+# 14.1 Introduction
+
+intro to string manipulation. focus is on regular expressions
+regexps are concise language for describing patterns in strings - they look crazy
+  at first!
+  
+## 14.1.1 Prerequisites
+```{r}
+library(tidyverse)
+```
+
+
+--------------------------------------------------------------------------------
+# 14.2 String basics
+
+can create strings with "" or '', usually do "" unless need multiple quotes
+```{r}
+string1 <- "This is a string"
+string2 <- 'If I want to include a "quote" inside a string, I use single quotes'
+```
+
+have to be really specific with quotes within strings, and backslashes
+
+use writeLines() to see the actual string contents
+
+"\n" for newline and "\n" for tab
+
+## 14.2.1 String length
+
+
+
+
