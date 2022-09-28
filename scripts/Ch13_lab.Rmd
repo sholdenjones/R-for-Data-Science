@@ -530,25 +530,13 @@ this hypothesis using the tools you’ve learned above.
 library(dplyr)
 library(nycflights13)
 
+# dad's answer: 17 repeats
 x <- flights %>%
   filter(!is.na(tailnum)) %>%
   distinct(tailnum, carrier) %>%
   group_by(tailnum) %>%
   summarise(combos = n()) %>%
   filter(combos > 1)
-
-# my answer: 0 repeats
-flights %>%
-  filter(!is.na(tailnum)) %>%
-  group_by(tailnum, carrier) %>%
-  summarise(combos = n_distinct(tailnum, carrier)) %>% #this is the problem.  n_distinct is essentially counting the same thing that was grouped by in the line above.  therefor it will always be 1
-  filter(combos > 1)
-
-# this also doesn't work - why doesn't n_distinct work here?
-flights %>%
-  filter(!is.na(tailnum)) %>%
-  summarise(combos = n_distinct(tailnum, carrier)) %>%
-  filter(combos >1)
 
 # actual answer: 17 repeats
 planes_carriers <-flights %>%
