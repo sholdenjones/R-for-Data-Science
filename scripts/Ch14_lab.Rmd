@@ -204,11 +204,112 @@ str_commasep(c("a", "b", "c", "d"))
 --------------------------------------------------------------------------------
 # 14.3 Matching patterns with regular expressions
 
+regexps allow describing of patterns in strings
+use str_view() and str_view_all()
+- take char vector and reg exp and show how they match
+- this is about pattern matching
+
+## 14.3.1 Basic matches
+```{r}
+x <- c("apple", "banana", "pear")
+
+# simplest, match exact string
+str_view(x, "an")
+
+# add ., matches any char (except a newline)
+str_view(x, ".a.")
+```
+
+but how do we match "."?
+- use escape with backslash "\", but that also used in strings
+- so use "\\."
+```{r}
+# To create the regular expression, we need \\
+dot <- "\\."
+
+# But the expression itself only contains one:
+writeLines(dot)
+#> \.
+
+# And this tells R to look for an explicit .
+str_view(c("abc", "a.c", "bef"), "a\\.c")
+```
+
+to match a literal \ you need to write "\\\\" — you need four backslashes to match one!
+```{r}
+x <- "a\\b"
+writeLines(x)
+
+str_view(x, "\\\\")
+```
+
+In this book, I’ll write regular expression as \. and strings that represent the regular expression as "\\."
+
+## 14.3.1.1 Exercises
+
+1. Explain why each of these strings don’t match a \: "\", "\\", "\\\".
+*need 4 \\\\ to match a \, regexp to escape \\, \ needed to escape the string made for the regexp*
+
+2. How would you match the sequence "'\?
+```{r}
+str_view("\"'\\", "\"'\\\\", match = TRUE)
+```
+
+3. What patterns will the regular expression \..\..\.. match? How would you represent it as a string?
+*anytime a "." is followed by any character, repeated three times*
+```{r}
+str_view(c(".a.b.c", ".a.b", "....."), c("\\..\\..\\.."), match = TRUE)
+```
+
+## 14.3.2 Anchors
+
+often useful to anchor the regexp so it matches from start or end of string, can use:
+^ to match start of string
+$ to match end of string
+use both to only match complete string
+```{r}
+x <- c("apple", "banana", "pear")
+str_view(x, "^a")
+str_view(x, "a$")
+
+x <- c("apple pie", "apple", "apple cake")
+str_view(x, "apple")
+
+str_view(x, "^apple$")
+```
+
+## 14.3.2.1 Exercises
+
+1. How would you match the literal string "$^$"?
+*this makes no sense at all lol*
+```{r}
+str_view(c("$^$", "ab$^$sfas"), "^\\$\\^\\$$", match = TRUE)
+
+# ok so the \\ are needed to escape, we need 2 b/ween each char
+str_view(c("$^^$", "ab$^^$sfas"), "^\\$\\^\\^\\$$", match = TRUE)
+```
+
+2. Given the corpus of common words in stringr::words, create regular expressions that find all words that:
+- Start with “y”
+```{r}
+str_view(words, "^y", match = TRUE)
+```
+- End with “x”
+```{r}
+str_view(words, "x$", match = TRUE)
+```
+- Are exactly three letters long. (Don’t cheat by using str_length()!)
+```{r}
+str_view(words, "^...$", match = TRUE)
+```
+- Have seven letters or more.
+```{r}
+str_view(words, ".......", match = TRUE)
+```
+- Since this list is long, you might want to use the match argument to str_view() to show only the matching or non-matching words.
+
+## 14.3.3 Character classes and alternatives
+
 ## RESUME HERE
-
-
-
-
-
 
 
