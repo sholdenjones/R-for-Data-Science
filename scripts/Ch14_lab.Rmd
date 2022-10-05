@@ -310,6 +310,66 @@ str_view(words, ".......", match = TRUE)
 
 ## 14.3.3 Character classes and alternatives
 
-## RESUME HERE
+some characters can match several other things
+```{r}
+# Look for a literal character that normally has special meaning in a regex
+str_view(c("abc", "a.c", "a*c", "a c"), "a[.]c")
 
+str_view(c("abc", "a.c", "a*c", "a c"), ".[*]c")
+
+str_view(c("abc", "a.c", "a*c", "a c"), "a[ ]")
+
+# use | for precedence
+str_view(c("grey", "gray"), "gr(e|a)y")
+```
+
+# 14.3.3.1 Exercises
+
+1. Create regular expressions to find all words that:
+- Start with a vowel.
+```{r}
+str_subset(words, "^(a|e|i|o|u)")
+```
+- That only contain consonants. (Hint: thinking about matching “not”-vowels.)
+```{r}
+str_subset(words, "[aeiou]", negate=TRUE)
+```
+- End with ed, but not with eed.
+```{r}
+str_subset(words, "[^e]ed$")
+```
+- End with ing or ise.
+```{r}
+str_subset(words, "ing$|ise$")
+```
+
+2. Empirically verify the rule “i before e except after c”.
+```{r}
+str_subset(words, "cie")
+```
+
+3. Is “q” always followed by a “u”?
+```{r}
+str_subset(words, "q.")
+```
+
+4. Write a regular expression that matches a word if it’s probably written in
+British English, not American English.
+```{r}
+str_subset(words, "ou")
+
+str_subset(words, "ou|ise$|ae|oe|yse$")
+```
+
+5. Create a regular expression that will match telephone numbers as commonly
+written in your country.
+```{r}
+# from answers:
+x <- c("123-456-7890", "(123)456-7890", "(123) 456-7890", "1235-2351")
+str_view(x, "\\d\\d\\d-\\d\\d\\d-\\d\\d\\d\\d")
+```
+
+## 14.3.4 Repetition
+
+## RESUME HERE
 
