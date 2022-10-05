@@ -371,5 +371,69 @@ str_view(x, "\\d\\d\\d-\\d\\d\\d-\\d\\d\\d\\d")
 
 ## 14.3.4 Repetition
 
-## RESUME HERE
+next step up is controlling how many times a pattern matches
+- "?" 0 or 1
+- "+" 1 or more
+- "*" 0 or more
+
+```{r}
+x <- "1888 is the longest year in Roman numerals: MDCCCLXXXVIII"
+
+str_view(x, "CC?")
+str_view(x, "CC+")
+str_view(x, 'C[LX]+')
+```
+
+# lots of syntax to help with specifying
+```{r}
+str_view(x, "C{2}")
+str_view(x, "C{2,}")
+str_view(x, "C{2,3}")
+str_view(x, 'C[LX]+?')
+```
+
+I don't get it
+
+## 14.3.4.1 Exercises
+- mostly from answers:
+
+1. Describe the equivalents of ?, +, * in {m,n} form.
+? = {0,1} = match at most 1
++ = {1,}  = match 1 or more
+* = {0,}  = match 0 or more
+
+2. Describe in words what these regular expressions match: 
+(read carefully to see if I’m using a regular expression or a string 
+that defines a regular expression.)
+- ^.*$
+*start with any character, end with any character, so any string*
+- "\\{.+\\}"
+*any string with curly braces around at least one character*
+- \d{4}-\d{2}-\d{2}
+*match 4 digits - 2 digits - 2 digits ex YYYY-MM-DD*
+- "\\\\{4}"
+*matches 4 backslashes*
+
+3. Create regular expressions to find all words that:
+- Start with three consonants.
+```{r}
+str_view(words, "^[^aeiou]{3}", match = TRUE)
+```
+- Have three or more vowels in a row.
+```{r}
+str_view(words, "[aeiou]{3,}", match = TRUE)
+```
+- Have two or more vowel-consonant pairs in a row.
+```{r}
+str_view(words, "([aeiou][^aeiou]){2,}", match = TRUE)
+```
+* I guess ^ means not as well as begin with? weird*
+
+4. Solve the beginner regexp crosswords at
+https://regexcrossword.com/challenges/beginner.
+*nah im good*
+
+
+
+
 
