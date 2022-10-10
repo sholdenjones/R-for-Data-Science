@@ -536,7 +536,7 @@ mean(str_count(words, "[aeiou]"))
 
 matches never overlap in regex
 ```{r}
-str_count("abababa", "aba")
+str_detect("abababa", "aba")
 str_view_all("abababa", "aba")
 ```
 
@@ -544,7 +544,68 @@ many stringr functions in pais, one works for one match, the other _all all matc
 
 ## 14.4.1.1 Exercises
 
-##RESUME HERE
+1. For each of the following challenges, try solving it by using both a single 
+regular expression, and a combination of multiple str_detect() calls.
+- Find all words that start or end with x.
+```{r}
+# one regex
+words[str_detect(words, "^x|x$")]
+
+# split regex into parts
+starts_x <- str_detect(words, "^x")
+ends_x <- str_detect(words, "x$")
+
+words[starts_x | ends_x]
+```
+- Find all words that start with a vowel and end with a consonant.
+```{r}
+str_subset(words, "^[aeiou].*[^aeiou]$")
+
+starts_vow <- str_detect(words, "^[aeiou]")
+ends_con <- str_detect(words, "[^aeiou]$")
+
+words[starts_vow & ends_con]
+```
+- Are there any words that contain at least one of each different vowel?
+```{r}
+has_a <- str_detect(words, "a")
+has_e <- str_detect(words, "e")
+has_i <- str_detect(words, "i")
+has_o <- str_detect(words, "o")
+has_u <- str_detect(words, "u")
+
+# appears there is none
+words[has_a & has_e & has_i & has_o & has_u]
+
+# from answers:
+pattern <-
+  cross(rerun(5, c("a", "e", "i", "o", "u")),
+    .filter = function(...) {
+      x <- as.character(unlist(list(...)))
+      length(x) != length(unique(x))
+    }
+  ) %>%
+  map_chr(~str_c(unlist(.x), collapse = ".*")) %>%
+  str_c(collapse = "|")
+
+str_subset(words, pattern)
+```
+
+2. What word has the highest number of vowels? What word has the highest 
+proportion of vowels? (Hint: what is the denominator?)
+```{r}
+# most number of vowels
+vowels <- str_count(words, "[aeiou]")
+words[which(vowels == max(vowels))]
+
+# highest prop of vowels
+prop_vowels <- str_count(words, "[aeiou]") / str_length(words)
+words[which(prop_vowels == max(prop_vowels))]
+```
+
+## 14.4.2 Extract matches
+
+## RESUME HERE
 
 
 
