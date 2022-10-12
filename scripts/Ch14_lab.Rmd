@@ -605,8 +605,72 @@ words[which(prop_vowels == max(prop_vowels))]
 
 ## 14.4.2 Extract matches
 
-## RESUME HERE
+str_extract() to extract actual text from a string
 
+find all sentences that contain a color
+```{r}
+# vector of color names, turn into regexp
+head(sentences)
+colours <- c("red", "orange", "yellow", "green", "blue", "purple")
+colour_match <- str_c(colours, collapse = "|")
+colour_match
 
+# find matches
+has_colour <- str_subset(sentences, colour_match)
+matches <- str_extract(has_colour, colour_match)
+head(matches)
 
+# str_extract only extracts 1st match, can see multiple matches:
+more <- sentences[str_count(sentences, colour_match) > 1]
+str_view_all(more, colour_match)
+
+str_extract(more, colour_match)
+
+# to get all matches:
+str_extract_all(more, colour_match)
+
+# return matrix of short matches expanded to longest
+str_extract_all(more, colour_match, simplify = TRUE)
+
+x <- c("a", "a b", "a b c")
+str_extract_all(x, "[a-z]", simplify = TRUE)
+```
+
+## 14.4.2.1 Exercises
+
+1. In the previous example, you might have noticed that the regular expression 
+matched “flickered”, which is not a colour. Modify the regex to fix the problem.
+*put space before each so each is its own word
+```{r}
+# modified regex so there's a space before each
+colours <- c(" red", " orange", " yellow", " green", " blue", " purple")
+colour_match <- str_c(colours, collapse = "|")
+
+more <- sentences[str_count(sentences, colour_match) > 1]
+str_view_all(more, colour_match)
+```
+
+2. From the Harvard sentences data, extract:
+- The first word from each sentence.
+*from answers*
+```{r}
+str_extract(sentences, "[A-Za-z][A-Za-z']*") %>% head()
+```
+- All words ending in ing.
+*from answers*
+```{r}
+pattern <- "\\b[A-Za-z]+ing\\b"
+
+sentences_with_ing <- str_detect(sentences, pattern)
+unique(unlist(str_extract_all(sentences[sentences_with_ing], pattern))) %>%
+  head()
+```
+- All plurals.
+*from answers*
+```{r}
+pattern <- "\\b[A-Za-z]{3,}s\\b"
+sentences_with_plur <- str_detect(sentences, pattern)
+unique(unlist(str_extract_all(sentences[sentences_with_plur], pattern))) %>%
+  head()
+```
 
