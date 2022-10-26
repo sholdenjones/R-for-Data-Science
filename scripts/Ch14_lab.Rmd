@@ -105,7 +105,8 @@ str_sort(x, locale = "haw") # Hawaiian
 and paste0(). What’s the difference between the two functions?
 What stringr function are they equivalent to? How do the
 functions differ in their handling of NA?
-*paste converts its arguments to character strings and seperates by sep argument, space as default. paste0 is more effeicient and assumes that sep = "" ie no spacing*
+*paste converts its arguments to character strings and seperates by sep argument,* 
+*space as default. paste0 is more effeicient and assumes that sep = "" ie no spacing*
 *str_c is closer in behavior to paste0*
 *but they do handle NAs differently, for str_c if one is NA the whole thing is!*
 ```{r}
@@ -124,7 +125,8 @@ paste0("foo", NA)
 
 2. In your own words, describe the difference between the 
 sep and collapse arguments to str_c().
-*sep asks how to separate each ind string from the one before and after the previous / next. Collapse asks should these all become one string?*
+*sep asks how to separate each ind string from the one before and after the* 
+*previous / next. Collapse asks should these all become one string?*
 ```{r}
 str_c("base", "ball", sep = "", collapse = NULL)
 str_c("base", "ball", sep = "_", collapse = NULL)
@@ -229,7 +231,6 @@ dot <- "\\."
 
 # But the expression itself only contains one:
 writeLines(dot)
-#> \.
 
 # And this tells R to look for an explicit .
 str_view(c("abc", "a.c", "bef"), "a\\.c")
@@ -243,7 +244,8 @@ writeLines(x)
 str_view(x, "\\\\")
 ```
 
-In this book, I’ll write regular expression as \. and strings that represent the regular expression as "\\."
+In this book, I’ll write regular expression as \. and strings that represent the
+regular expression as "\\."
 
 ## 14.3.1.1 Exercises
 
@@ -384,7 +386,7 @@ str_view(x, "CC+")
 str_view(x, 'C[LX]+')
 ```
 
-# lots of syntax to help with specifying
+lots of syntax to help with specifying
 ```{r}
 str_view(x, "C{2}")
 str_view(x, "C{2,}")
@@ -674,3 +676,267 @@ unique(unlist(str_extract_all(sentences[sentences_with_plur], pattern))) %>%
   head()
 ```
 
+## 14.4.3 Grouped matches
+
+can use () to extract parts of complex match
+```{r}
+noun <- "(a|the) ([^ ]+)"
+
+has_noun <- sentences %>%
+  str_subset(noun) %>%
+  head(10)
+has_noun %>% 
+  str_extract(noun)
+```
+
+str_extract() gives complete match, str_match() gives each ind component of match
+```{r}
+has_noun %>% 
+  str_match(noun)
+```
+
+if data in tibble easier to use tidyr::extract()
+also nice that it stores this info in a tibble with chr variables
+```{r}
+tibble(sentence = sentences) %>% 
+  tidyr::extract(
+    sentence, c("article", "noun"), "(a|the) ([^ ]+)", 
+    remove = FALSE
+  )
+```
+
+## 14.4.3.1 Exercises
+
+1. Find all words that come after a “number” like “one”, “two”, “three” etc. 
+   Pull out both the number and the word.
+```{r}
+# added space before #s to remove eg 'stone', 'forgone'
+# must be a way to shorten writing out numbers, also this code won't catch all
+tibble(sentence = sentences) %>%
+  extract(
+    sentence, c("number", "word"), 
+    " (one|two|three|four|five|six|seven|eight|nine|ten) ([^ ]+)",
+    remove = FALSE
+  )
+```
+
+2. Find all contractions. Separate out the pieces before and after the apostrophe.
+*my answer*
+```{r}
+# weird formatting issue with sentences - \u0092t = '
+# can't get it to store what comes before, what is syntax?
+tibble(sentence = sentences) %>% 
+  extract(
+    sentence, c("before", "contraction", "after"), "([^ ]+) (\u0092t) ([^ ]+)", 
+    remove = FALSE
+  )
+
+# without storing what comes before contraction
+tibble(sentence = sentences) %>% 
+  extract(
+    sentence, c("contraction", "after"), "(\u0092t) ([^ ]+)", 
+    remove = FALSE
+  )
+```
+
+*answer sheet*
+```{r}
+contraction <- "([A-Za-z]+)'([A-Za-z]+)"
+
+sentences[str_detect(sentences, contraction)] %>%
+  str_extract(contraction) %>%
+  str_split("'")
+```
+
+## 14.4.4 Replacing matches
+
+str_replace() allows you to replace matches with strings
+```{r}
+# simplest is with a fixed string:
+x <- c("apple", "pear", "banana")
+
+str_replace(x, "[aeiou]", "-") # just replaces first
+str_replace_all(x, "[aeiou]", "-") # replaces all
+
+# with _all can perform multiple replacements supplying named vector
+x <- c("1 house", "2 cars", "3 people")
+
+str_replace_all(x, c("1" = "one", "2" = "two", "3" = "three"))
+```
+
+can also use backreferences to insert components of match instead of fixed string
+```{r}
+sentences %>% 
+  str_replace("([^ ]+) ([^ ]+) ([^ ]+)", "\\1 \\3 \\2") %>% 
+  head(5)
+```
+
+## 14.4.4.1 Exercises
+
+1. Replace all forward slashes in a string with backslashes.
+*my answer*
+```{r}
+x <- c("you/are", "not/baller", "bro/ther")
+
+#wtf? tried both ways and this will replace but with "\\" not "\"
+str_replace_all(x, "/", "\\\\")
+```
+
+*answer sheet*
+```{r}
+str_replace_all("past/present/future", "/", "\\\\")
+```
+
+2. Implement a simple version of str_to_lower() using replace_all().
+*answer sheet*
+```{r}
+replacements <- c("A" = "a", "B" = "b", "C" = "c", "D" = "d", "E" = "e",
+                  "F" = "f", "G" = "g", "H" = "h", "I" = "i", "J" = "j", 
+                  "K" = "k", "L" = "l", "M" = "m", "N" = "n", "O" = "o", 
+                  "P" = "p", "Q" = "q", "R" = "r", "S" = "s", "T" = "t", 
+                  "U" = "u", "V" = "v", "W" = "w", "X" = "x", "Y" = "y", 
+                  "Z" = "z")
+lower_words <- str_replace_all(words, pattern = replacements)
+head(lower_words)
+```
+
+3. Switch the first and last letters in words. Which of those strings are still
+   words?
+*answer sheet*
+```{r}
+# vector of all swapped words
+swapped <- str_replace_all(words, "^([A-Za-z])(.*)([A-Za-z])$", "\\3\\2\\1")
+
+# which of these are in intersection of words?
+intersect(swapped, words)
+```
+
+## 14.4.5 Splitting
+
+str_split() to split string into pieces
+```{r}
+sentences %>%
+  head(5) %>% 
+  str_split(" ")
+
+# return a matrix
+sentences %>%
+  head(5) %>% 
+  str_split(" ", simplify = TRUE)
+```
+
+can control how to split up strings
+
+## 14.4.5.1 Exercises
+
+1. Split up a string like "apples, pears, and bananas" into individual components.
+*answer sheet*
+```{r}
+x <- c("apples, pears, and bananas")
+str_split(x, ", +(and +)?")[[1]]
+```
+
+2. Why is it better to split up by boundary("word") than " "?
+*more sophisticated, recognizes non-space punctuation*
+
+3. What does splitting with an empty string ("") do? Experiment, and then read 
+the documentation.
+*splits string into individual characters*
+```{r}
+str_split("ab. cd|agt", "")[[1]]
+```
+
+## 14.4.6 Find matches
+
+str_locate() and str_locate_all() give you the starting and ending positions 
+of each match. These are particularly useful when none of the other functions 
+does exactly what you want. You can use str_locate() to find the matching pattern,
+str_sub() to extract and/or modify them.
+
+
+--------------------------------------------------------------------------------
+# 14.5 Other types of pattern
+
+pattern that's a string is automatically wrapped into call to regex()
+```{r}
+# The regular call:
+str_view(fruit, "nana")
+# Is shorthand for
+str_view(fruit, regex("nana"))
+```
+
+can use other regex() arguments to control details of the match
+- ignore_case = TRUE allows characters to match either their uppercase or 
+  lowercase forms. This always uses the current locale.
+- multiline = TRUE allows ^ and $ to match the start and end of each line rather 
+  than the start and end of the complete string.
+- comments = TRUE allows you to use comments and white space to make complex 
+  regular expressions more understandable. Spaces are ignored, as is everything 
+  after #. To match a literal space, you’ll need to escape it: "\\ ".
+  
+three other functions can be used besides regex()
+- fixed()
+- coll()
+- boundary()
+
+## 14.5.1 Exercises
+
+1. How would you find all strings containing \ with regex() vs. with fixed()?
+*answer sheet*
+```{r}
+str_subset(c("a\\b", "ab"), "\\\\")
+
+str_subset(c("a\\b", "ab"), fixed("\\"))
+```
+
+2. What are the five most common words in sentences?
+```{r}
+tibble(word = unlist(str_extract_all(sentences, boundary("word")))) %>%
+  mutate(word = str_to_lower(word)) %>%
+  count(word, sort = TRUE) %>%
+  head(5)
+```
+
+
+--------------------------------------------------------------------------------
+# 14.6 Other uses of regular expressions
+
+two useful functions in base R that also use regular expressions
+- apropos() searches all objects available from the global environment. 
+  This is useful if you can’t quite remember the name of the function.
+- dir() lists all the files in a directory. The pattern argument takes a regular
+  expression and only returns file names that match the pattern. For example, 
+  you can find all the R Markdown files in the current directory with: 
+```{r}
+head(dir(pattern = "\\.Rmd$"))
+```
+
+
+--------------------------------------------------------------------------------
+# 14.7 stringi
+
+stringr is built on stringi package, stringi is much more comprehensive
+if struggling to do something in stringr, try stringi!
+
+## 14.7.1 Exercises
+
+1. Find the stringi functions that:
+*all from answer sheet*
+- Count the number of words.
+```{r}
+library(stringi)
+stri_count_words(head(sentences))
+```
+- Find duplicated strings.
+```{r}
+stri_duplicated(c("the", "brown", "cow", "jumped", "over",
+                           "the", "lazy", "fox"))
+```
+- Generate random text.
+```{r}
+# 4 random strings of length 5
+stri_rand_strings(4, 5)
+```
+
+2. How do you control the language that stri_sort() uses for sorting?
+*can set a locale*
