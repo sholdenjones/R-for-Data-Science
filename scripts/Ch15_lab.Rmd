@@ -1,0 +1,80 @@
+---
+title: "Ch15_lab"
+author: "Holden Jones"
+date: '2022-10-27'
+output: html_document
+---
+
+# Factors
+
+
+--------------------------------------------------------------------------------
+# 15.1 Introduction
+
+factors used to work with categorical variables, factors easier to work with so
+base R automatically converts categorical variables to factors, but not in tidy
+
+## 15.1.1 Prerequisites
+
+use the forcats package
+```{r}
+library(tidyverse)
+```
+
+## 15.1.2 Learning more
+
+Read Amelia McNamara and Nicholas Horton's paper; Wrangling categorical data in R
+
+
+--------------------------------------------------------------------------------
+# 15.2 Creating factors
+
+Imagine that you have a variable that records month:
+```{r}
+x1 <- c("Dec", "Apr", "Jan", "Mar")
+
+# Using a string to record this variable has two problems:
+# only 12 months, and can make typos
+x2 <- c("Dec", "Apr", "Jam", "Mar")
+
+# and doesn't sort in good way:
+sort(x1)
+```
+
+You can fix both of these problems with a factor. To create a factor you must 
+start by creating a list of the valid levels:
+```{r}
+month_levels <- c(
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+)
+
+# now can create a factor:
+y1 <- factor(x1, levels = month_levels)
+y1
+sort(y1)
+
+# any values not in levels set will silently become NA:
+y2 <- factor(x2, levels = month_levels)
+y2
+
+# if we omit levels, will be taken from data in alphabetical order:
+factor(x1)
+
+# sometimes prefer that order of levels matches order of first appearence:
+# use unique() or after the fact with fct_inorder():
+f1 <- factor(x1, levels = unique(x1))
+f1
+
+f2 <- x1 %>% factor() %>% fct_inorder()
+f2
+
+# if need to access levels, can do so with levels():
+levels(f2)
+```
+
+
+--------------------------------------------------------------------------------
+
+
+
