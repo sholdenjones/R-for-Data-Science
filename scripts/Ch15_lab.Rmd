@@ -75,6 +75,98 @@ levels(f2)
 
 
 --------------------------------------------------------------------------------
+# 15.3 General Social Survey
+
+focusing rest of chapter on data from GSS, U of Chicago survey
+```{r}
+gss_cat
+
+# quick view of different variables with count:
+gss_cat %>%
+  count(race)
+
+gss_cat  %>%
+  count(relig)
+
+# or bar chart:
+ggplot(gss_cat, aes(race)) +
+  geom_bar()
+
+ggplot(gss_cat, aes(relig)) +
+  geom_bar()
+
+# by default ggplot will drop levels without any values, can force them to show:
+ggplot(gss_cat, aes(race)) +
+  geom_bar() +
+  scale_x_discrete(drop = FALSE)
+```
+
+## 15.3.1 Exercises
+
+1. Explore the distribution of rincome (reported income). What makes the default 
+  bar chart hard to understand? How could you improve the plot?
+```{r}
+# default includes lots of things like don't know, NA, and the ordering is off
+gss_cat %>%
+  ggplot(aes(rincome)) +
+   geom_bar()
+
+# can remove non numerical cases
+gss_cat %>%
+  filter(!rincome == 'Not applicable',
+         !rincome == 'No answer',
+         !rincome == "Don't know",
+         !rincome == 'Refused') %>%
+  ggplot(aes(rincome)) +
+   geom_bar() +
+   scale_x_discrete(limits = rev(levels(gss_cat$rincome)), drop = TRUE)
+
+# also can reorder x axes to be in descending order
+gss_cat %>%
+  ggplot(aes(rincome)) +
+   geom_bar() +
+   scale_x_discrete(limits = rev(levels(gss_cat$rincome)), drop = FALSE)
+```
+
+2. What is the most common relig in this survey? What’s the most common partyid?
+```{r}
+# Protestant most common relig
+gss_cat %>%
+  count(relig) %>%
+  arrange(desc(n)) %>%
+  head(1)
+
+# Independent most common partyid
+gss_cat %>%
+  count(partyid) %>%
+  arrange(desc(n)) %>%
+  head(1)
+```
+
+3. Which relig does denom (denomination) apply to? How can you find out with a 
+  table? How can you find out with a visualisation?
+*answer sheet*
+```{r}
+# filter out no answer responses to denomination, all remaining are Protestant
+gss_cat %>%
+  filter(!denom %in% c(
+    "No answer", "Other", "Don't know", "Not applicable",
+    "No denomination"
+  )) %>%
+  count(relig)
+
+# also clear in scatterplot
+gss_cat %>%
+  count(relig, denom) %>%
+  ggplot(aes(x = relig, y = denom, size = n)) +
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+
+--------------------------------------------------------------------------------
+# 15.4 Modifying factor order
+
 
 
 
