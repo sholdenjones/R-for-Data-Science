@@ -167,6 +167,221 @@ gss_cat %>%
 --------------------------------------------------------------------------------
 # 15.4 Modifying factor order
 
+take the same plot but with and without reordered levels of relig
+```{r}
+# default:
+relig_summary <- gss_cat %>%
+  group_by(relig) %>%
+  summarise(
+    age = mean(age, na.rm = TRUE),
+    tvhours = mean(tvhours, na.rm = TRUE),
+    n = n()
+  )
+
+ggplot(relig_summary, aes(tvhours, relig)) + geom_point()
+
+# with reordered:
+ggplot(relig_summary, aes(tvhours, fct_reorder(relig, tvhours))) +
+  geom_point()
+```
+
+fct_reorder() takes 3 arguments:
+- f, factor whose levels to modify
+- x, numeric vector used to reorder levels
+- fun, optional function used if multiple values of x for each f, default median
+
+as transformations get more complicated, better to move them into mutate()
+  instead of aes()
+```{r}
+# same plot as above:
+relig_summary %>%
+  mutate(relig = fct_reorder(relig, tvhours)) %>%
+  ggplot(aes(tvhours, relig)) +
+    geom_point()
+```
+
+similar plot, how does avg age vary across reported income level?
+```{r}
+rincome_summary <- gss_cat %>%
+  group_by(rincome) %>%
+  summarise(
+    age = mean(age, na.rm = TRUE),
+    tvhours = mean(tvhours, na.rm = TRUE),
+    n = n()
+  )
+
+ggplot(rincome_summary, aes(age, fct_reorder(rincome, age))) + geom_point()
+```
+
+here shouldn't reorder x axis b/c rincome has principled order that shouldn't 
+  be changed
+*only use fct_reorder() for factors whose levels are arbitrarily ordered*
+but it does make sense to reorder y axis a bit
+```{r}
+ggplot(rincome_summary, aes(age, fct_relevel(rincome, "Not applicable"))) +
+  geom_point()
+```
+
+reordering also useful when colouring lines on plot
+fct_reorder2 reorders factor by y values associated with highest x values
+  means that line colours line up with legend!
+```{r}
+by_age <- gss_cat %>%
+  filter(!is.na(age)) %>%
+  count(age, marital) %>%
+  group_by(age) %>%
+  mutate(prop = n / sum(n))
+
+ggplot(by_age, aes(age, prop, colour = marital)) +
+  geom_line(na.rm = TRUE)
+
+ggplot(by_age, aes(age, prop, colour = fct_reorder2(marital, age, prop))) +
+  geom_line() +
+  labs(colour = "marital")
+```
+
+for barplots can use fct_infreq() to order levels in increasing freq
+may want to combine with fct_rev()
+```{r}
+gss_cat %>%
+  mutate(marital = marital %>% fct_infreq() %>% fct_rev()) %>%
+  ggplot(aes(marital)) +
+    geom_bar()
+```
+
+## 15.4.1 Exercises
+
+1. There are some suspiciously high numbers in tvhours. Is the mean a 
+  good summary?
+*well it doesn't seem like they're typos as there are multiples*
+*median shows them all as the same, so tend to stick with mean here*
+```{r}
+gss_cat %>%
+  count(tvhours)
+
+# tv hours by relig
+relig_summary <- gss_cat %>%
+  group_by(relig) %>%
+  summarise(
+    age = mean(age, na.rm = TRUE),
+    tvhours_med = median(tvhours, na.rm = TRUE),
+    n = n()
+  )
+
+# using median shows the majority at 2 hours despite the means being v diff.
+ggplot(relig_summary, aes(tvhours_med, fct_reorder(relig, tvhours_med))) +
+  geom_point()
+```
+
+2. For each factor in gss_cat identify whether the order of the levels is       arbitrary or principled.
+*principled: year, age, rincome, rest are arbitrary*
+
+3. Why did moving “Not applicable” to the front of the levels move it to 
+  the bottom of the plot?
+*b/c gives the 'Not applicable' factor an integer value of 1*
+
+
+--------------------------------------------------------------------------------
+# 15.5 Modifying factor levels
+
+More powerful than changing orders of levels is changing their values
+can clarify labels for publication, and collapse levels for high-level display
+use fct_recode() for this:
+```{r}
+# partid levels terse and inconsistent
+gss_cat %>%
+  count(partyid)
+
+# tweak to be longer and use parallel construction
+gss_cat %>%
+  mutate(partyid = fct_recode(partyid,
+    "Republican, strong"    = "Strong republican",
+    "Republican, weak"      = "Not str republican",
+    "Independent, near rep" = "Ind,near rep",
+    "Independent, near dem" = "Ind,near dem",
+    "Democrat, weak"        = "Not str democrat",
+    "Democrat, strong"      = "Strong democrat"
+  )) %>%
+  count(partyid)
+```
+
+to combine groups, can assign multiple old levels to same new level:
+```{r}
+gss_cat %>%
+  mutate(partyid = fct_recode(partyid,
+    "Republican, strong"    = "Strong republican",
+    "Republican, weak"      = "Not str republican",
+    "Independent, near rep" = "Ind,near rep",
+    "Independent, near dem" = "Ind,near dem",
+    "Democrat, weak"        = "Not str democrat",
+    "Democrat, strong"      = "Strong democrat",
+    "Other"                 = "No answer",
+    "Other"                 = "Don't know",
+    "Other"                 = "Other party"
+  )) %>%
+  count(partyid)
+```
+
+have to be careful with this! fct_collapse() to provide vector of old levels:
+```{r}
+gss_cat %>%
+  mutate(partyid = fct_collapse(partyid,
+    other = c("No answer", "Don't know", "Other party"),
+    rep = c("Strong republican", "Not str republican"),
+    ind = c("Ind,near rep", "Independent", "Ind,near dem"),
+    dem = c("Not str democrat", "Strong democrat")
+  )) %>%
+  count(partyid)
+```
+
+sometimes lump together all small groups to make plot or table simpler, 
+  use fct_lump():
+```{r}
+gss_cat %>%
+  mutate(relig = fct_lump(relig)) %>%
+  count(relig)
+```
+
+we probably over collapsed here, instead can use n to specify how many groups:
+```{r}
+gss_cat %>%
+  mutate(relig = fct_lump(relig, n = 10)) %>%
+  count(relig)
+```
+
+## 15.5.1 Exercises
+
+1. How have the proportions of people identifying as Democrat, Republican, 
+  and Independent changed over time?
+*ind increase, dem constant, rep decrease*
+```{r}
+gss_cat %>%
+  mutate(partyid = fct_collapse(partyid,
+    other = c("No answer", "Don't know", "Other party"),
+    rep = c("Strong republican", "Not str republican"),
+    ind = c("Ind,near rep", "Independent", "Ind,near dem"),
+    dem = c("Not str democrat", "Strong democrat")
+  )) %>%
+  filter(!partyid == 'other') %>%
+  count(year, partyid) %>%
+  group_by(year) %>%
+  mutate(prop = n / sum(n)) %>% 
+  ggplot(aes(year, prop, color = fct_reorder2(partyid, year, prop))) +
+  geom_line() +
+  labs(color = "partyid")
+```
+
+2. How could you collapse rincome into a small set of categories?
+```{r}
+gss_cat %>%
+  mutate(rincome = fct_collapse(rincome,
+    other = c("Refused", "Don't know", "No answer", "Not applicable"),
+    'less than $10000' = c("$8000 to 9999", "$7000 to 7999", "$6000 to 6999",
+                           "$5000 to 5999", "$4000 to 4999", "$3000 to 3999",
+                           "$1000 to 2999", "Lt $1000")
+  )) %>%
+  count(rincome)
+```
 
 
 
