@@ -102,8 +102,209 @@ bindwidth of 86400 equals one day. for dates, 1 means 1 day
 
 May want to switch between date-time and date. use as_datetime() and as_date()
 
+## 16.2.4 Exercises
+
+1. What happens if you parse a string that contains invalid dates?
+*fail to parse the invalid dates but parse the rest*
+```{r}
+x <- ymd(c("2010-10-10", "bananas"))
+x
+```
+
+2. What does the tzone argument to today() do? Why is it important?
+*assigns time zone, obvi important b/c date can change*
+
+3. Use the appropriate lubridate function to parse each of the
+following dates:
+```{r}
+d1 <- "January 1, 2010"
+mdy(d1)
+
+d2 <- "2015-Mar-07"
+ymd(d2)
+
+d3 <- "06-Jun-2017"
+dmy(d3)
+
+d4 <- c("August 19 (2015)", "July 1 (2015)")
+mdy(d4)
+
+d5 <- "12/30/14"
+mdy(d5)
+```
 
 
+--------------------------------------------------------------------------------
+# 16.3 Date-time components
+
+focus on accessor functions to get and set individual components
+
+## 16.3.1 Getting components
+
+can pull out individual parts of date with accessor functions
+```{r}
+datetime <- ymd_hms("2016-07-08 12:34:56")
+
+year(datetime)
+month(datetime)
+mday(datetime)
+yday(datetime)
+wday(datetime)
+
+# for month() and wday() can set label as true
+month(datetime, label = TRUE)
+wday(datetime, label = TRUE)
+```
+
+use wday() to see that more flights depart during week than on weekend
+```{r}
+flights_dt %>% 
+  mutate(wday = wday(dep_time, label = TRUE)) %>%
+  filter(!is.na(air_time)) %>%
+  ggplot(aes(x = wday)) +
+    geom_bar()
+```
+
+can look at average departure delay by minute within the hour:
+```{r}
+flights_dt %>% 
+  mutate(minute = minute(dep_time)) %>% 
+  group_by(minute) %>% 
+  summarise(
+    avg_delay = mean(arr_delay, na.rm = TRUE),
+    n = n()) %>% 
+  ggplot(aes(minute, avg_delay)) +
+    geom_line()
+# interesting that there are peaks and values of this throughout the hour
+
+# but if we look at scheduled departure we don't see this pattern:
+sched_dep <- flights_dt %>% 
+  mutate(minute = minute(sched_dep_time)) %>% 
+  group_by(minute) %>% 
+  summarise(
+    avg_delay = mean(arr_delay, na.rm = TRUE),
+    n = n())
+
+ggplot(sched_dep, aes(minute, avg_delay)) +
+  geom_line()
+```
+
+interesting, reason for discrepency b/ween scheduled and departure time due to 
+human judgement - preference for 'nice' departure times
+```{r}
+ggplot(sched_dep, aes(minute, n)) +
+  geom_line()
+```
+
+## 16.3.2 Rounding
+
+instead of plotting individual components, can round to nearby unit of time
+can use floord_date(), round_date(), ceiling_date()
+```{r}
+# with week can plot number of flights per week:
+flights_dt %>% 
+  count(week = floor_date(dep_time, "week")) %>% 
+  ggplot(aes(week, n)) +
+    geom_line()
+
+# but we can also do this with just week() from lubridate: notice difference in 
+# plots, why is this?
+flights_dt %>% 
+  count(week = week(dep_time)) %>% 
+  ggplot(aes(week, n)) +
+    geom_line()
+```
+
+computing difference between rounded and unrounded date can be useful
+
+## 16.3.3 Setting components
+
+can use each accessor function to set components of date/time and update them
+```{r}
+(datetime <- ymd_hms("2016-07-08 12:34:56")) # () to print result
+
+(year(datetime) <- 2020)
+
+(month(datetime) <- 01)
+
+(hour(datetime) <- hour(datetime) + 1)
+
+(update(datetime, year = 2020, month = 2, mday = 2, hour = 2))
+```
+
+values roll over if too big:
+```{r}
+ymd("2015-02-01") %>% 
+  update(mday = 30)
+
+ymd("2015-02-01") %>% 
+  update(hour = 400)
+```
+
+use update() to show dist. of flights across course every day of the year
+```{r}
+flights_dt %>% 
+  mutate(dep_hour = update(dep_time, yday = 1)) %>% # make day = 1 for all
+  ggplot(aes(dep_hour)) +
+    geom_freqpoly(binwidth = 300)
+```
+
+setting larger components of a date constant is a powerful way to explore
+techniques in smaller components
+
+## 16.3.4 Exercises
+
+1. How does the distribution of flight times within a day change over the 
+  course of the year?
+*group_by month, recreate prior figure for each month of year*
+*no big difference across months*
+```{r}
+flights_dt %>% 
+  group_by(month(dep_time)) %>%
+  mutate(dep_hour = update(dep_time, yday = 1)) %>%
+  mutate(month = factor(month(dep_time))) %>%
+  ggplot(aes(dep_hour)) +
+  geom_freqpoly(aes(group = month, colour = month)) +
+  theme(axis.text.x = element_blank())
+```
+
+2. Compare dep_time, sched_dep_time and dep_delay. Are they consistent? 
+  Explain your findings.
+*wow this is funky! not sure if my plot / code is doing what I think it is*
+```{r}
+flights_dt %>%
+  filter(!is.na(air_time)) %>%
+  mutate(dep_time = update(dep_time, yday = 1),
+         sched_dep_time = update(sched_dep_time, yday = 1)) %>%
+  ggplot(aes(sched_dep_time, dep_time, color = dep_delay)) +
+  geom_point()
+# funky! so this shows that vast vast majority of sched and actual dep time are
+# closely correlated, but there's a strange group of outliers below, these are
+# flights delayed from the previous day whose departure was pushed back a day!
+
+# answer sheet took it a different way:
+flights_dt %>%
+  mutate(dep_time_ = sched_dep_time + dep_delay * 60) %>%
+  filter(dep_time_ != dep_time) %>%
+  select(dep_time_, dep_time, sched_dep_time, dep_delay)
+# these discrepencies are the outliers in my above figure
+```
+
+3. Compare air_time with the duration between the departure and arrival. 
+  Explain your findings. (Hint: consider the location of the airport.)
+
+4. How does the average delay time change over the course of a day? Should 
+  you use dep_time or sched_dep_time? Why?
+
+5. On what day of the week should you leave if you want to minimise the chance 
+  of a delay?
+
+6. What makes the distribution of diamonds$carat and flights$sched_dep_time
+  similar?
+
+7. Confirm my hypothesis that the early departures of flights in minutes 20-30
+  and 50-60 are caused by scheduled flights that leave early. Hint: create a
+  binary variable that tells you whether or not a flight was delayed.
 
 
 
