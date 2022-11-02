@@ -292,19 +292,168 @@ flights_dt %>%
 
 3. Compare air_time with the duration between the departure and arrival. 
   Explain your findings. (Hint: consider the location of the airport.)
+*expect that for flights b/ween airports in same time zone, air_time will equal*
+*arrival - departure, how to control for different time zones?*
+```{r}
+# currently using abs value of arr_time - dep_time, and <1000 dif so not long
+flights_dt %>%
+  mutate(arr_minus_dep = abs(arr_time - dep_time)) %>%
+  filter(arr_minus_dep < 1000) %>%
+  ggplot(aes(air_time, arr_minus_dep)) +
+    geom_point()
+# interesting! trend goes up, but then seems to reset regularl intervals
+
+# from answer sheet:
+flights_dt %>%
+  mutate(
+    flight_duration = as.numeric(arr_time - dep_time),
+    air_time_mins = air_time,
+    diff = flight_duration - air_time_mins
+  ) %>%
+  select(origin, dest, flight_duration, air_time_mins, diff) %>%
+  ggplot(aes(diff)) +
+  geom_histogram()
+```
 
 4. How does the average delay time change over the course of a day? Should 
   you use dep_time or sched_dep_time? Why?
+*def use sched_dep_time b/c that's what's relevant for delays*
+*need to control for late flights getting delayed into the next day, makes
+```{r}
+# going to look at diff between dep_time and sched_dep_time for delay
+flights_dt %>% 
+  mutate(sched_dep_hour = hour(update(sched_dep_time, yday = 1)),
+         dep_delay = as.numeric(abs(dep_time - sched_dep_time))) %>%
+  group_by(sched_dep_hour) %>%
+  mutate(avg_dep_delay = mean(dep_delay)) %>%
+  ggplot(aes(sched_dep_hour, avg_dep_delay)) +
+    geom_point(aes())
+# generally the later it gets the larger the dep_delay is, late flights super
+# likely to get delayed to the next day which makes the graph look crazy
+
+# need to find a way to control for changes in the day; ie 23:30 - 00:30
+# being a delay of 60 min instead of 23 hours
+
+# from answer sheet:
+flights_dt %>%
+  mutate(sched_dep_hour = hour(sched_dep_time)) %>%
+  group_by(sched_dep_hour) %>%
+  summarise(dep_delay = mean(dep_delay)) %>%
+  ggplot(aes(y = dep_delay, x = sched_dep_hour)) +
+  geom_point() +
+  geom_smooth()
+# lesson here is always review the df!!! there was already a delay column
+# that had differences in the day accounted for!!!! doophus!
+```
 
 5. On what day of the week should you leave if you want to minimise the chance 
   of a delay?
+*fly on saturdays boys*
+```{r}
+flights_dt %>%
+  mutate(weekday = weekdays(sched_dep_time)) %>%
+  group_by(weekday) %>%
+  ggplot(aes(weekday, arr_delay)) +
+  geom_boxplot()
+# can't really discern any difference between weekdays visually
+
+# try with just compare means
+flights_dt %>%
+  mutate(weekday = weekdays(sched_dep_time)) %>%
+  group_by(weekday) %>%
+  summarize(mean(arr_delay, na.rm = TRUE))
+# this shows that Saturdays have the lowest mean arr_delay
+# actually mean is ahead of sched by one minute!
+```
 
 6. What makes the distribution of diamonds$carat and flights$sched_dep_time
   similar?
+*I think human preference explains the similarity in both dist*
+*flights more likely to be scheduled and diamonds more likely to be graded*
+*at round numbers*
+```{r}
+diamonds %>%
+  ggplot(aes(carat)) +
+  geom_histogram(binwidth = 0.05)
+
+flights %>%
+  ggplot(aes(sched_dep_time)) +
+  geom_histogram(binwidth = 10)
+```
 
 7. Confirm my hypothesis that the early departures of flights in minutes 20-30
   and 50-60 are caused by scheduled flights that leave early. Hint: create a
   binary variable that tells you whether or not a flight was delayed.
+```{r}
+# I misread the question, looked for flights leaving in those time windows
+# as being delayed from earlier
+flights %>%
+  group_by(arr_delay) %>%
+  mutate(status = ifelse(arr_delay > 1, "D", "OT")) %>%
+  ggplot(aes(minute, color = status)) +
+    geom_freqpoly()
+# This doesn't support that hypothesis, identical patterns
+
+# but here's what was actually meant, from answers:
+flights_dt %>% 
+  mutate(minute = minute(dep_time),
+         early = dep_delay < 0) %>% # cool this is how to make binary var.
+  group_by(minute) %>% 
+  summarise(
+    early = mean(early, na.rm = TRUE),
+    n = n()) %>% 
+  ggplot(aes(minute, early)) +
+    geom_line()
+```
+
+
+--------------------------------------------------------------------------------
+# 16.4 Time spans
+
+arithmetic with dates, and 3 important classes with time spans:
+- durations
+- periods
+- intervals
+
+## 16.4.1 Durations
+
+subtracting two dates gets a difftime object
+```{r}
+# How old am I?
+(h_age <- today() - ymd(19960710))
+# wow haha
+```
+
+difftimes are annoying, so use duration from lubridate:
+```{r}
+as.duration(h_age)
+
+# durations have a bunch of convenient constructors:
+dseconds(15)
+dminutes(10)
+dhours(c(12, 24))
+ddays(0:5)
+dweeks(3)
+dyears(1)
+# always recorded in seconds
+
+# can add and multiply durations:
+2 * dyears(1)
+dyears(1) + dweeks(12) + dhours(15)
+
+# add and subtract durations:
+tomorrow <- today() + ddays(1)
+last_year <- today() - dyears(1)
+
+# but take care if working across DST
+(one_pm <- ymd_hms("2016-03-12 13:00:00", tz = "America/New_York"))
+one_pm + ddays(1)
+```
+
+## 16.4.2 Periods
+
+
+
 
 
 
