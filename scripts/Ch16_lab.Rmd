@@ -452,8 +452,152 @@ one_pm + ddays(1)
 
 ## 16.4.2 Periods
 
+use periods to solve problem of working across DST - work with "human" times
+```{r}
+one_pm
+one_pm + days(1)
+
+# like durations, periods can be created with friendly constructors
+seconds(15)
+minutes(10)
+hours(c(12, 24))
+days(7)
+months(1:6)
+weeks(3)
+years(1)
+
+# can add and multiply periods
+10 * (months(6) + days(1))
+days(50) + hours(25) + minutes(2)
+```
+
+and of course can add them to dates, periods more likely to do what expected:
+```{r}
+ymd("2016-01-01") + dyears(1)
+ymd("2016-01-01") + years(1)
+
+# Daylight Savings Time
+one_pm + ddays(1)
+one_pm + days(1)
+```
+
+use periods to fix oddity in flight dates: flights that arrived before departed
+```{r}
+flights_dt %>% 
+  filter(arr_time < dep_time)
+# these are ovwernight flights
+
+# can fix by adding days(1) to arrival time of each overnight flight:
+flights_dt <- flights_dt %>% 
+  mutate(
+    overnight = arr_time < dep_time, # binary T/F overnight variable!
+    arr_time = arr_time + days(overnight * 1), # multiply by value of overnight
+    sched_arr_time = sched_arr_time + days(overnight * 1)
+  )
+
+# now all flights obey laws of physics!
+flights_dt %>% 
+  filter(overnight, arr_time < dep_time) 
+```
+
+## 16.4.3 Intervals
+
+leap years are tricky, lubridate() will give an estimate, use intervals!
+*%--% seems to be the interval symbol!*
+```{r}
+years(1) / days(1)
+
+# use an interval to get more accurate measurement:
+next_year <- today() + years(1)
+(today() %--% next_year) / ddays(1)
+
+# integer division to see how many periods fall into an interval:
+(today() %--% next_year) %/% days(1)
+```
+
+## 16.4.4 Summary
+
+How to pick between duration, periods and intervals?
+as always, pick simplest data structure that solves problem
+- duration if only care about physical time
+- period if care about human times
+- interval if need to know how long a span is in human units
+
+# 16.4.5 Exercises
+
+1. Why is there months() but no dmonths()?
+*months have different lengths, so can't assign a standard duration*
+
+2. Explain days(overnight * 1) to someone who has just started learning R. 
+  How does it work?
+*in the flights dataset, overnight is either true (1) or false (0), to make the*
+*arrival time match reality, we add a day to the arrival time only when ov is T*
+
+3. Create a vector of dates giving the first day of every month in 2015. Create 
+  a vector of dates giving the first day of every month in the current year.
+```{r}
+x <- mdy("January 1st 2015")
+first_2015 <- c(x, x + months(1:11))
+first_2015
+
+y <- mdy("January 1st 2022")
+first_2022 <- c(y, y + months(1:11))
+first_2022
+```
+
+4. Write a function that given your birthday (as a date), returns how old you 
+  are in years.
+```{r}
+birthday <- mdy("July 10th, 1996")
+
+abs((today() %--% birthday) / years(1))
+```
+
+5. Why can’t (today() %--% (today() + years(1))) / months(1) work?
+*use %/% to find number of months in an interval instead of /*
+```{r}
+(today() %--% (today() + years(1))) / months(1)
+```
 
 
+--------------------------------------------------------------------------------
+# 16.5 Time zones
 
+time zones are super complicated
+R uses international standard IANA time zones, continent/city
 
+find current time zone
+```{r}
+Sys.timezone()
 
+# complete list of time zone names:
+head(OlsonNames())
+
+# can have same instant of time in different time zones:
+(x1 <- ymd_hms("2015-06-01 12:00:00", tz = "America/New_York"))
+(x2 <- ymd_hms("2015-06-01 18:00:00", tz = "Europe/Copenhagen"))
+(x3 <- ymd_hms("2015-06-02 04:00:00", tz = "Pacific/Auckland"))
+
+x1 - x2
+x1 - x3
+```
+
+unless otherwise specified, lubridate always uses UTC, no use DST
+
+can change time zone in two ways
+- keep instant in time the same, just change how it's displayed
+- change underlying instant in time, use when have time zone mislabelled
+```{r}
+x4 <- c(x1, x2, x3)
+x4
+
+# keep instant the same, change display:
+x4a <- with_tz(x4, tzone = "Australia/Lord_Howe")
+x4a
+x4a - x4
+
+# change underlying instant in time:
+x4b <- force_tz(x4, tzone = "Australia/Lord_Howe")
+x4b
+x4b - x4
+```
