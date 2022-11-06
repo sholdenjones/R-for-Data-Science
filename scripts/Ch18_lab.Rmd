@@ -1,0 +1,179 @@
+---
+title: "Ch18_lab"
+author: "Holden Jones"
+date: '2022-11-06'
+output: html_document
+---
+
+# Pipes
+
+
+--------------------------------------------------------------------------------
+# 18.1 Introduction
+
+pipes are powerful tool for clearly expressing sequence of multiple operations
+
+## 18.1.1 Prerequisites
+
+pipe comes from magrittr package, loaded by tidyverse automatically tho
+```{r}
+library(magrittr)
+```
+
+
+--------------------------------------------------------------------------------
+# 18.2 Piping alternatives
+
+point of pipe is to help write code that is easier to read and understand
+
+little bunny Foo Foo example
+```{r}
+foo_foo <- little_bunny()
+```
+
+four ways we could tell the story in code:
+  1. save each intermediate step as new object
+  2. overwrite original object many times
+  3. compose functions
+  4. use the pipe
+  
+here's each approach:
+
+## 18.2.1 Intermediate steps
+
+simplest approach
+```{r}
+foo_foo_1 <- hop(foo_foo, through = forest)
+foo_foo_2 <- scoop(foo_foo_1, up = field_mice)
+foo_foo_3 <- bop(foo_foo_2, on = head)
+```
+
+downsides:
+- code cluttered with unimportant names
+- have to carefully increment suffix on each line
+
+don't worry about memory tho, that's a waste of time!
+
+```{r}
+diamonds <- ggplot2::diamonds
+diamonds2 <- diamonds %>% 
+  dplyr::mutate(price_per_carat = price / carat)
+```
+
+if columns are shared between dataframes they will be stored as one!
+if we modify one then thats no longer the case
+
+## 18.2.2 Overwrite the original
+
+```{r}
+foo_foo <- hop(foo_foo, through = forest)
+foo_foo <- scoop(foo_foo, up = field_mice)
+foo_foo <- bop(foo_foo, on = head)
+```
+
+less typing and thinking so less likely to make mistakes, but 2 problems:
+- debugging painful! if make mistake need to re-run complete pipeline
+- repetition of object being transformed obscures what's changing on each line
+
+## 18.2.3 Function composition
+
+another approach to abandon assignment and string function calls together
+```{r}
+bop(
+  scoop(
+    hop(foo_foo, through = forest),
+    up = field_mice
+  ), 
+  on = head
+)
+```
+
+disadvantage is that have to read from inside-out, right-to-left:
+- dagwood sandwhich problem! from Blondie comics
+
+## 18.2.4 Use the pipe
+
+```{r}
+foo_foo %>%
+  hop(through = forest) %>%
+  scoop(up = field_mice) %>%
+  bop(on = head)
+```
+
+great b/c focuses on verbs, not nouns. set of imperative actions
+%>% is pretty intuitive / easy to explain to others
+
+pipe works by performing "lexical transformation" behind scenes
+magrittr reassembles code in pipe to form that overwrites intermediate object:
+```{r}
+my_pipe <- function(.) {
+  . <- hop(., through = forest)
+  . <- scoop(., up = field_mice)
+  bop(., on = head)
+}
+my_pipe(foo_foo)
+```
+
+pipe won't work for two classes of functions:
+1. functons that use current envirionment, ex. assign(), get(), load()
+2. functions that use lazy evaluation, ex. tryCatch()
+
+
+--------------------------------------------------------------------------------
+# 18.3 When not to use the pipe
+
+powerful but not only tool at disposal
+best for writing short linear sequence of operations
+
+use another tool when:
+- pipes are longer than (say) ten steps
+  - in this case create intermediate objects with meaningful names
+    - easier to check results and understand code
+- have multiple inputs or outputs
+  - if 2 or more objects being transformed, don't use the pipe
+- if thinking about directed graph with complicated dependency structure
+  - pipes fundamentally linear so complex relationships will yield confusion
+  
+
+--------------------------------------------------------------------------------
+# 18.4 Other tools from magrittr
+
+%>% automatically loaded in tidyverse, but other magrittr tools can be useful
+
+when working w/ complex pipes, sometimes useful to call function for side effect
+- maybe print current object, plot it, or save it to disk
+- use "tee" pipe: %T%, returns left-hand side instead of right-hand side
+```{r}
+rnorm(100) %>%
+  matrix(ncol = 2) %>%
+  plot() %>%
+  str() # structure of above is NULL
+
+rnorm(100) %>%
+  matrix(ncol = 2) %T>% # save this so structure at end can use
+  plot() %>%
+  str()
+```
+
+if working w/ functions that don't have data frame based API
+-%$% may be useful, it explodes out variables in dataframe so can
+  refer to them explicitly
+- useful with many functions in baseR
+```{r}
+mtcars %$%
+  cor(disp, mpg)
+```
+
+%<>% operator for assignment which allows for following:
+```{r}
+# instead of:
+mtcars <- mtcars %>% 
+  transform(cyl = cyl * 2)
+
+# use %<>% for:
+mtcars %<>% transform(cyl = cyl * 2)
+```
+
+Hadley isn't a fan tho b/c assignment is so important that it's worth
+emphasizing!
+- I agree!

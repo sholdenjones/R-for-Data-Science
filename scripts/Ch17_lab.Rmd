@@ -1,0 +1,37 @@
+---
+title: "Ch17_lab"
+author: "Holden Jones"
+date: '2022-11-06'
+output: html_document
+---
+
+# Introduction
+
+
+--------------------------------------------------------------------------------
+
+need programing for all data science work!
+
+code as vehicle for communication - to computer and other humans
+want code to be easy to write and easy to read
+
+pipes - when to use, when not to, and alternatives
+
+functions - extract out repeated code that can be easily reused
+          - copy-and-paste is powerful, but avoid doing it more than twice
+          
+vectors - solid grounding in R's data structures, necessary for writing more
+        - powerful functions
+        
+iteration - tools that let you do similar things again and again
+
+
+--------------------------------------------------------------------------------
+# 17.1 Learning more
+
+important to invest in programming skills
+- Honds on Programming with R - great place to start if R is first programming
+  language.
+  
+- Advanced R - start if have existing programming experience
+
