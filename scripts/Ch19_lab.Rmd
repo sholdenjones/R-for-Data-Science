@@ -4,3 +4,228 @@ author: "Holden Jones"
 date: '2022-12-08'
 output: html_document
 ---
+
+# Functions
+
+going to move a bit quicker through this
+
+
+--------------------------------------------------------------------------------
+# 19.1 Introduction
+
+3 big advantages over copy and paste:
+- give a function a name that makes code easier to understand
+- as requirements change, only need to update code in one place
+- eliminate chance of making incidental mistakes 
+
+## 19.1.1 Prerequisites
+
+base R so no need
+
+
+--------------------------------------------------------------------------------
+# 19.2 When should you write a function?
+
+if copy and pasting a bunch of code more than twice, write a function!
+
+ex. this code randomizes a tibble using same parameters each time
+```{r}
+df <- tibble::tibble(
+  a = rnorm(10),
+  b = rnorm(10),
+  c = rnorm(10),
+  d = rnorm(10)
+)
+
+df$a <- (df$a - min(df$a, na.rm = TRUE)) / 
+  (max(df$a, na.rm = TRUE) - min(df$a, na.rm = TRUE))
+df$b <- (df$b - min(df$b, na.rm = TRUE)) / 
+  (max(df$b, na.rm = TRUE) - min(df$b, na.rm = TRUE)) # og was mistake here!
+df$c <- (df$c - min(df$c, na.rm = TRUE)) / 
+  (max(df$c, na.rm = TRUE) - min(df$c, na.rm = TRUE))
+df$d <- (df$d - min(df$d, na.rm = TRUE)) / 
+  (max(df$d, na.rm = TRUE) - min(df$d, na.rm = TRUE))
+```
+
+how many inputs does this code have?
+- just one for each line
+
+to make inputs more clear, good idea to rewrite code using temp vars
+```{r}
+x <- df$a
+(x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+
+# there's duplication here, compute range of data once:
+rng <- range(x, na.rm = TRUE)
+(x - rng[1]) / (rng[2] - rng[1])
+```
+
+after siplifying code and checking that it still works, can turn into function
+```{r}
+rescale01 <- function(x) {
+  rng <- range(x, na.rm = TRUE)
+  (x - rng[1]) / (rng[2] - rng[1])
+}
+rescale01(c(0, 5, 10))
+```
+
+3 steps to creating new function:
+- pick a name for the function, rescale01 b/c rescales b/ween 0 and 1
+- list inputs or arguments to function inside function(), just one here, but
+  with more, call looks like function(x,y,z)
+- place code that have developed in body of function, a {} that immediately
+  follows function(...)
+
+easier to start with working code and turn it into a function, harder to create
+  function first and then try to make it work
+  
+good to check function with a few different inputs
+```{r}
+rescale01(c(-10, 0, 10))
+rescale01(c(1, 2, 3, NA, 5))
+```
+
+eventually will want to do formal, automated tests, called unit tests
+but outside scope of this book
+
+can simplify og code now that we have a function:
+```{r}
+df$a <- rescale01(df$a)
+df$b <- rescale01(df$b)
+df$c <- rescale01(df$c)
+df$d <- rescale01(df$d)
+```
+
+this code easier to understand, but still quite a bit of duplication
+will learn to improve this in iteration later
+
+ex.if some var include infinite values, rescale01() will fail
+- but can easily and efficiently correct it as a function
+```{r}
+x <- c(1:10, Inf)
+
+rescale01 <- function(x) {
+  rng <- range(x, na.rm = TRUE, finite = TRUE)
+  y <- (x - rng[1]) / (rng[2] - rng[1])
+  y[y == -Inf] <- 0
+  y[y == Inf] <- 1
+  y
+}
+
+(rescale01(x))
+```
+
+do not repeat yourself! DRY! principle: 
+less repition = fewer needs to update = fewer bugs and errors
+
+## 19.2.1 Exercises
+*all from answers*
+
+1. Why is TRUE not a parameter to rescale01()? What would happen if x 
+  contained a single missing value, and na.rm was FALSE?
+*b/c even if na.rm is FALSE, will return non-missing value*
+
+2. In the second variant of rescale01(), infinite values are left unchanged.
+  Rewrite rescale01() so that -Inf is mapped to 0, and Inf is mapped to 1.
+```{r}
+rescale01 <- function(x) {
+  rng <- range(x, na.rm = TRUE, finite = TRUE)
+  (x - rng[1]) / (rng[2] - rng[1])
+}
+```
+
+3. Practice turning the following code snippets into functions. Think about 
+  what each function does. What would you call it? How many arguments does it
+  need? Can you rewrite it to be more expressive or less duplicative?
+```{r}
+x <- c(1:10)
+
+# takes proportion of nas in a vector
+mean(is.na(x))
+
+# call prop_na:
+prop_na <- function(x) {
+  mean(is.na(x))
+}
+prop_na(x)
+
+# look at prop of overall sum for each value in vector
+x / sum(x, na.rm = TRUE)
+
+prop_sum <- function(x) {
+  x / sum(x, na.rm = TRUE)
+}
+prop_sum(x)
+
+# calculates sd / mean aka coefficient of variation for a vector
+sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE)
+
+coeff_var <- function(x, na.rm = TRUE) {
+  sd(x, na.rm = na.rm) / mean(x, na.rm = na.rm)
+}
+coeff_var(x)
+```
+
+4. Write your own functions to compute the variance and skewness of a numeric
+  vector.
+*from answers*
+```{r}
+# variance
+variance <- function(x, na.rm = TRUE) {
+  n <- length(x)
+  m <- mean(x, na.rm = TRUE)
+  sq_err <- (x - m)^2
+  sum(sq_err) / (n - 1)
+}
+
+variance(x)
+var(x) # check
+
+# skewness
+skewness <- function(x, na.rm = FALSE) {
+  n <- length(x)
+  m <- mean(x, na.rm = na.rm)
+  v <- var(x, na.rm = na.rm)
+  (sum((x - m) ^ 3) / (n - 2)) / v ^ (3 / 2)
+}
+
+skewness(x)
+```
+
+5. Write both_na(), a function that takes two vectors of the same length and
+  returns the number of positions that have an NA in both vectors.
+```{r}
+both_na <- function(x, y) {
+  sum(is.na(x) & is.na(y))
+}
+
+both_na(
+  c(NA, NA, 1, 2),
+  c(NA, 1, NA, 2)
+)
+
+both_na(
+  c(NA, NA, 1, 2, NA, NA, 1),
+  c(NA, 1, NA, 2, NA, NA, 1)
+)
+```
+
+6. What do the following functions do? Why are they useful even though they are
+  so short?
+*always good to make sure directory and file access is in order!*
+```{r}
+is_directory <- function(x) file.info(x)$isdir
+is_readable <- function(x) file.access(x, 4) == 0
+```
+
+7. Read the complete lyrics to “Little Bunny Foo Foo”. There’s a lot of
+  duplication in this song. Extend the initial piping example to recreate the
+  complete song, and use functions to reduce the duplication.
+*didn't end up working*
+
+
+--------------------------------------------------------------------------------
+# 19.3 Functions are for humans and computers
+
+## RESUME HERE
+
