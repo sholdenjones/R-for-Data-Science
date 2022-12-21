@@ -275,6 +275,7 @@ f3(1:5, 1:3)
 *similar functions that are closely related should have same prefix*
 
 
+--------------------------------------------------------------------------------
 # 19.4 Conditional execution
 
 an if statement allows you to conditionally execute code
@@ -424,6 +425,7 @@ switch(x,
 ```
 
 
+--------------------------------------------------------------------------------
 # 19.5 Function arguments
 
 arguments in two broad sets:
@@ -574,13 +576,14 @@ rule("Vital output", pad = "-+-")
 *which correlation coefficient to be computed, pearson is default*
 
 
-## 19.6 Return values
+--------------------------------------------------------------------------------
+# 19.6 Return values
 
 Things to think about when considering what your function should return:
 - Does returning early make your function easier to read?
 - Can you make your function pipeable?
 
-# 19.6.1 Explicit return statements
+## 19.6.1 Explicit return statements
 
 can choose to return early by using return()
 tends to make really long code easier to understand, b/c don't need as much
@@ -596,6 +599,7 @@ knowing return value's object type means pipeline will "just work"
 - side-effects
 
 
+--------------------------------------------------------------------------------
 # 19.7 Environment
 
 Last component of a function is its environment
