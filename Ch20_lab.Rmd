@@ -9,3 +9,124 @@ output: html_document
 
 
 --------------------------------------------------------------------------------
+# 20.1 Introduction
+
+vectors are objects that underlie vectors
+
+## 20.1.1 Prerequisites
+
+```{r}
+library(tidyverse)
+```
+
+## 20.1.2 Vector basics
+
+2 main types of vectors:
+- Atomic vectors, of which there are six types: logical, integer, double,
+  character, complex, and raw. Integer and double vectors are collectively known
+  as numeric vectors.
+- Lists, which are sometimes called recursive vectors because lists can contain
+  other lists.
+
+atomic vectors are homogenous
+lists can be heterogenous
+NULL is a related object, means absence of vector
+
+every vector has two key properties:
+1. type, which determine with typeof()
+2. length, which determine with length()
+```{r}
+# type
+typeof(letters)
+typeof(1:10)
+
+# length
+x <- list("a", "b", 1:10)
+length(x)
+```
+
+vectors can also contain arbitrary additional metadata in form of attributes
+used to create augmented vectors which build on additional behaviour
+- factors are built on top of integer vectors
+- dates and date-times are built on top of numeric vectors
+- data frames and tibbles are built on top of lists
+
+
+--------------------------------------------------------------------------------
+# 20.3 Important types of atomic vectors
+
+4 most important types of atomic vector
+- logical
+- integer
+- double
+- character
+
+## 20.3.1 Logical
+
+Logical vectors are simplest type of atomic vector b/c can take only 3 values:
+- FALSE
+- TRUE
+- NA
+logical vectors usually constructed with comparison operators, also can use c()
+```{r}
+# comparison operator
+1:10 %% 3 == 0
+
+# c()
+c(TRUE, TRUE, FALSE, NA)
+```
+
+## 20.3.2 Numeric
+
+Integer and double vectors known collectively as numeric vectors
+to make an integer, place L after the number
+```{r}
+typeof(1)
+typeof(1L)
+```
+
+distinction b/ween integers and doubles is not usually important, but:
+- doubles are approximations
+- integers have one special value NA, while doubles have four: NA, NAN, Inf, -Inf
+
+## 20.3.3 Character
+
+most complex type of atomic vector, b/c each element is a string
+already learned about strings in strings!
+R uses global string pool - saves memory!
+
+## 20.3.4 Missing values
+
+each type of atomic vector has its own missing value
+- logical = NA
+- integer = NA_integer_
+- double = NA_real_
+- character = NA_character_
+but don't worry about this too much, R will implicitly correct to vector type
+
+## 20.3.5 Exercises
+
+## RESUME HERE ##
+
+1. Describe the difference between is.finite(x) and !is.infinite(x).
+
+2. Read the source code for dplyr::near() (Hint: to see the source code, 
+  drop the ()). How does it work?
+
+3. A logical vector can take 3 possible values. How many possible values can 
+  an integer vector take? How many possible values can a double take? Use google
+  to do some research.
+
+4. Brainstorm at least four functions that allow you to convert a double to an
+  integer. How do they differ? Be precise.
+
+5. What functions from the readr package allow you to turn a string into logical,
+  integer, and double vector?
+
+
+
+
+
+
+
+
