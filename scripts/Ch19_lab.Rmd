@@ -596,7 +596,7 @@ knowing return value's object type means pipeline will "just work"
 - side-effects
 
 
-## 19.7 Environment
+# 19.7 Environment
 
 Last component of a function is its environment
 
