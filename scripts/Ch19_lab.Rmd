@@ -227,5 +227,54 @@ is_readable <- function(x) file.access(x, 4) == 0
 --------------------------------------------------------------------------------
 # 19.3 Functions are for humans and computers
 
-## RESUME HERE
+function names should be verbs, arguments should be nouns
+use common prefixes if functions are related
+use comments to explain "why", try to write code so that "what/how" are clear
+break code up with dashes, like I've been doing!
+
+## 19.3.1 Exercises
+
+1. Read the source code for each of the following three functions, puzzle out 
+  what they do, and then brainstorm better names.
+```{r}
+f1 <- function(string, prefix) {
+  substr(string, 1, nchar(prefix)) == prefix
+}
+
+f1(c("hey", "hi", "what", "is", "up", "Holden"), "h")
+# tests to see if a string has a given prefix
+# rename has_prefix()
+
+f2 <- function(x) {
+  if (length(x) <= 1) return(NULL)
+  x[-length(x)]
+}
+
+f2(1:6)
+# drops last value of vector
+# rename drop_last_value
+
+f3 <- function(x, y) {
+  rep(y, length.out = length(x))
+}
+
+f3(1:5, 1:3)
+# repeats y so that is matches length of x
+# rename repeat_to_match
+```
+
+2. Take a function that you’ve written recently and spend 5 minutes 
+  brainstorming a better name for it and its arguments.
+
+3. Compare and contrast rnorm() and MASS::mvrnorm(). How could you make them 
+  more consistent?
+*mvrnorm() should follow rnorm() naming conventions b/c it is more used*
+
+4. Make a case for why norm_r(), norm_d() etc would be better than rnorm(), 
+  dnorm(). Make a case for the opposite.
+*similar functions that are closely related should have same prefix*
+
+
+## 19.4 Conditional execution
+
 
