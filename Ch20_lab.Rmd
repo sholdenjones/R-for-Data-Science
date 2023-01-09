@@ -328,11 +328,75 @@ use str() b/c focuses on structure, not contents
 
 ## 20.5.2 Subsetting
 
-## RESUME HERE
 3 ways to subset a list
 ```{r}
+a <- list(a = 1:3, b = "a string", c = pi, d = list(-1, -5))
 
+# [ extracts a sub-list
+str(a[1:2])
+
+# [[ extracts single component from a list, removes level of hierarchy
+str(a[[1]])
+
+# $ extracts named elements of a list. Don't need quotes
+a$a
 ```
+
+[ vs. [[ is important
+- [ - returns new, smaller list
+- [[ - drills down into list
+
+## 20.5.3 Lists of condiments
+
+great peppershaker example!
+[ leaves element of list within list form, [[ isolates the element
+
+## 20.5.4 Exercises
+
+1. Draw the following lists as nested sets:
+ - list(a, b, list(c, d), list(e, f))
+ - list(list(list(list(list(list(a))))))
+
+2. What happens if you subset a tibble as if you’re subsetting a list? 
+  What are the key differences between a list and a tibble?
+*subsetting tibble works same way as a list, difference is that tibble needs*
+*same number of rows in each column*
+
+
+--------------------------------------------------------------------------------
+# 20.6 Attributes
+
+attributes - additional arbitrary metadata - list of vectors attached to any obj.
+```{r}
+x <- 1:10
+
+attr(x, "greeting")
+
+attr(x, "greeting") <- "Hi!"
+attr(x, "farewell") <- "Bye!"
+
+attributes(x)
+```
+
+3 very important attributes used to implement fundamental parts of R
+- Names are used to name elements of a vector
+- Dimensions make a vector behave like a matrix or array
+- Class is used to implement S3 object oriented system
+
+class controls how generic functions work
+- specifies implementation of methods
+- ex. as factor or as character?
+- most important S3 generic is print() - controls how object is printed 
+ 
+
+
+
+
+
+
+
+
+
 
 
 
