@@ -389,7 +389,84 @@ class controls how generic functions work
 - most important S3 generic is print() - controls how object is printed 
  
 
+--------------------------------------------------------------------------------
+# 20.7 Augmented vectors
 
+atomic vectors and lists are building blocks for factors and dates
+these are called augmented vectors b/c are vectors with additional attributes
+
+4 important augmented vectors:
+- Factors
+- Dates
+- Date-times
+- Tibbles
+
+## 20.7.1 Factors
+
+designed to represent categorical data that can take fixed set of possible values
+built on top of integers, and have a levels attribute
+```{r}
+x <- factor(c("ab", "cd", "ab"), levels = c("ab", "cd", "ef"))
+
+typeof(x)
+attributes(x)
+```
+
+## 20.7.2 Dates and date-times
+
+Dates in R are numeric vectors that represent number of days since 1/1/1970
+```{r}
+x <- as.Date("1971-01-01")
+
+unclass(x)
+typeof(x)
+attributes(x)
+```
+
+Date-times numeric vectors with class POSIXct represent number of seconds since
+1/1/1970
+```{r}
+x <- lubridate::ymd_hm("1970-01-01 01:00")
+unclass(x)
+typeof(x)
+attributes(x)
+```
+
+## 20.7.3 Tibbles
+
+Tibbles are augmented lists
+-  have class “tbl_df” + “tbl” + “data.frame”, names (column) & row.names attribute
+```{r}
+tb <- tibble::tibble(x = 1:5, y = 5:1)
+
+typeof(tb)
+attributes(tb)
+```
+
+the class of tibbles includes "data.frame" which means tibbles inherit regular
+data frame behaviour by default
+
+## 20.7.4 Exercises
+
+1. What does hms::hms(3600) return? How does it print? What primitive type is 
+  the augmented vector built on top of? What attributes does it use?
+*returns 01:00:00, is a double, attributes "units" and "class"*
+
+2. Try and make a tibble that has columns with different lengths. What happens?
+*depends on how you try to make it!*
+```{r}
+# this way it just repeats the shorter column
+tibble(x = 1, y = 1:5)
+
+# but this way it throws an error
+tibble(x = 1:3, y = 1:5)
+```
+
+3. Based on the definition above, is it ok to have a list as a column of a tibble?
+*seems to be fine! will just repeat the shortest column*
+```{r}
+tibble(x = 1:3, y = list("a", 1, list(1:3)))
+```
 
 
 
