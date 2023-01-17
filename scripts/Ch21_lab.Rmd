@@ -113,9 +113,20 @@ for (i in names(iris)) {
 iris_uniq
 ```
 
-## RESUME HERE
-
 - Generate 10 random normals from distributions with means of -10, 0, 10, and 100.
+```{r}
+n <- 10
+mu <- c(-10, 0, 10, 100)
+
+output <- vector("list", length(mu))  # 1. output
+
+for (i in seq_along(output)) {            # 2. sequence
+  output[[i]] <- rnorm(n, mu[i])      # 3. body
+}
+
+output
+```
+
 Think about the output, sequence, and body before you start writing the loop.
 
 2. Eliminate the for loop in each of the following examples by taking advantage 
@@ -125,20 +136,33 @@ out <- ""
 for (x in letters) {
   out <- stringr::str_c(out, x)
 }
+out
+
+# use str_c
+str_c(letters, collapse = "")
 
 x <- sample(100)
-sd <- 0
+sdev <- 0
 for (i in seq_along(x)) {
-  sd <- sd + (x[i] - mean(x)) ^ 2
+  sdev <- sdev + (x[i] - mean(x)) ^ 2
 }
-sd <- sqrt(sd / (length(x) - 1))
+sdev <- sqrt(sdev / (length(x) - 1))
+sdev
 
+# use sd
+sd(x)
+
+# this is calculating a cumulative sum
 x <- runif(100)
 out <- vector("numeric", length(x))
 out[1] <- x[1]
 for (i in 2:length(x)) {
   out[i] <- out[i - 1] + x[i]
 }
+out
+
+# use cumsum
+all.equal(cumsum(x), out)
 ```
 
 3. Combine your function writing and for loop skills:
@@ -148,6 +172,71 @@ for (i in 2:length(x)) {
   number of people in any sleeping structure.
 - Convert the song “99 bottles of beer on the wall” to a function. Generalise to
   any number of any vessel containing any liquid on any surface.
+```{r}
+# camels
+humps <- c("five", "four", "three", "two", "one", "no")
+
+for (i in humps) {
+  cat(str_c("Alice the camel has ", rep(i, 3), " humps.",
+    collapse = "\n"
+  ), "\n")
+  if (i == "no") {
+    cat("Now Alice is a horse.\n")
+  } else {
+    cat("So go, Alice, go.\n")
+  }
+  cat("\n")
+}
+
+# sleeping
+structure <- "beefmarphshlarpdong"
+numbers <- c("ten", "nine", "eight", "seven", "six", "five", "four", "three", 
+             "two", "one", "no")
+
+for (i in numbers) {
+  cat(str_c("There were ", i, " in the ", print(structure)))
+  cat("\nand the little one said\n")
+  if (i == "one") {
+    cat("I'm lonely...")
+  } else {
+    cat("Roll over, roll over\n")
+    cat("So they all rolled over and one fell out.\n")
+  }
+  cat("\n")
+}
+
+# wall drinking - from answers
+bottles <- function(n) {
+  if (n > 1) {
+    str_c(n, " bottles")
+  } else if (n == 1) {
+    "1 bottle"
+  } else {
+    "no more bottles"
+  }
+}
+
+beer_bottles <- function(total_bottles) {
+  # print each lyric
+  for (current_bottles in seq(total_bottles, 0)) {
+    # first line
+    cat(str_to_sentence(str_c(bottles(current_bottles), " of beer on the wall, ",
+                              bottles(current_bottles), " of beer.\n")))   
+    # second line
+    if (current_bottles > 0) {
+      cat(str_c(
+        "Take one down and pass it around, ", bottles(current_bottles - 1),
+        " of beer on the wall.\n"
+      ))          
+    } else {
+      cat(str_c("Go to the store and buy some more, ", bottles(total_bottles), 
+                " of beer on the wall.\n"))                }
+    cat("\n")
+  }
+}
+
+beer_bottles(99)
+```
 
 4. It’s common to see for loops that don’t preallocate the output and instead
   increase the length of a vector at each step:
@@ -160,6 +249,32 @@ output
 ```
 
 How does this affect performance? Design and execute an experiment.
+*Allocation is way faster!*
+```{r}
+# from answers
+library('microbenchmark')
+
+# w/out preallocation
+add_to_vector <- function(n) {
+  output <- vector("integer", 0)
+  for (i in seq_len(n)) {
+    output <- c(output, i)
+  }
+  output
+}
+
+# w/ preallocation
+add_to_vector_2 <- function(n) {
+  output <- vector("integer", n)
+  for (i in seq_len(n)) {
+    output[[i]] <- i
+  }
+  output
+}
+
+timings <- microbenchmark(add_to_vector(10000), add_to_vector_2(10000), times = 10)
+timings
+```
 
 
 --------------------------------------------------------------------------------
