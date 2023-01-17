@@ -11,6 +11,157 @@ output: html_document
 --------------------------------------------------------------------------------
 # 21.1 Introduction
 
+Super important to reduce code duplication. 3 main benefits:
+- Easier to see intent of code, eyes drawn to differences
+- Easier to respond to changes in requirements, changes in one place only
+- Likely to have fewer bugs b/c each line of code used in more places
+
+Functions are one tool for reducing duplication, iteration is another one!
+- here will learn about imperative programming and functional programming
+
+imperative - for and while loops, good places to start but verbose
+functional - more complicated, but once mastered can solve many iteration probs
+
+## 21.1.1 Prerequisites
+
+will use base R and purr
+```{r}
+library(tidyverse)
+```
 
 
+--------------------------------------------------------------------------------
+# 21.2 For loops
+
+simple tibble
+```{r}
+df <- tibble(
+  a = rnorm(10),
+  b = rnorm(10),
+  c = rnorm(10),
+  d = rnorm(10)
+)
+```
+
+want to compute median of each column, use for loop instead of copy and paste
+```{r}
+output <- vector("double", ncol(df))  # 1. output
+
+for (i in seq_along(df)) {            # 2. sequence
+  output[[i]] <- median(df[[i]])      # 3. body
+}
+
+output
+```
+
+every for loop has three components:
+1. output 
+  - before start loop must allocate sufficient space for output
+  - super important for efficiency
+2. sequence
+  - determines what to loop over: each run of for loop will assign i to diff
+    value from a sequence. Think of i as a pronoun, like "it"
+  - seq_along() is safer version of familiar 1:length(), but does right thing
+    for a zero-length vector
+3. body
+  - this is the code that does the work
+  - run repeatedly, each time with different value for i
+  
+## 21.2.1 Exercises
+
+1. Write for loops to:
+
+- Compute the mean of every column in mtcars.
+```{r}
+output <- vector("double", ncol(mtcars))
+
+for (i in seq_along(mtcars)) {
+  output[[i]] <- mean(mtcars[[i]])
+}
+
+output
+```
+
+- Determine the type of each column in nycflights13::flights.
+```{r}
+library(nycflights13)
+
+# still getting some errors here:
+ouput <- vector("list", ncol(flights)) # used list not char
+
+for (i in seq_along(flights)) {
+  output[[i]] <- str(flights[[i]])
+}
+
+output
+```
+- Compute the number of unique values in each column of iris.
+```{r}
+# this is mine, gets right answer but also printing leftovers from flights
+ouput <- vector("double", ncol(iris))
+for (i in seq_along(iris)) {
+  output[[i]] <- n_distinct(iris[[i]])
+}
+output
+
+# answer sheets, prints right amount - why different?
+iris_uniq <- vector("double", ncol(iris))
+names(iris_uniq) <- names(iris)
+for (i in names(iris)) {
+  iris_uniq[i] <- n_distinct(iris[[i]])
+}
+iris_uniq
+```
+
+## RESUME HERE
+
+- Generate 10 random normals from distributions with means of -10, 0, 10, and 100.
+Think about the output, sequence, and body before you start writing the loop.
+
+2. Eliminate the for loop in each of the following examples by taking advantage 
+  of an existing function that works with vectors:
+```{r}
+out <- ""
+for (x in letters) {
+  out <- stringr::str_c(out, x)
+}
+
+x <- sample(100)
+sd <- 0
+for (i in seq_along(x)) {
+  sd <- sd + (x[i] - mean(x)) ^ 2
+}
+sd <- sqrt(sd / (length(x) - 1))
+
+x <- runif(100)
+out <- vector("numeric", length(x))
+out[1] <- x[1]
+for (i in 2:length(x)) {
+  out[i] <- out[i - 1] + x[i]
+}
+```
+
+3. Combine your function writing and for loop skills:
+- Write a for loop that prints() the lyrics to the children’s song “Alice the
+  camel”.
+- Convert the nursery rhyme “ten in the bed” to a function. Generalise it to any
+  number of people in any sleeping structure.
+- Convert the song “99 bottles of beer on the wall” to a function. Generalise to
+  any number of any vessel containing any liquid on any surface.
+
+4. It’s common to see for loops that don’t preallocate the output and instead
+  increase the length of a vector at each step:
+```{r}
+output <- vector("integer", 0)
+for (i in seq_along(x)) {
+  output <- c(output, lengths(x[[i]]))
+}
+output
+```
+
+How does this affect performance? Design and execute an experiment.
+
+
+--------------------------------------------------------------------------------
+# 21.3 For loop variations
 
