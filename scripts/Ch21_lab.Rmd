@@ -1,0 +1,16 @@
+---
+title: "Ch21_lab"
+author: "Holden Jones"
+date: '2023-01-17'
+output: html_document
+---
+
+# Iteration
+
+
+--------------------------------------------------------------------------------
+# 21.1 Introduction
+
+
+
+
