@@ -1,0 +1,138 @@
+---
+title: "Ch23_lab"
+author: "Holden Jones"
+date: '2023-01-24'
+output: html_document
+---
+
+# Model basics
+
+
+--------------------------------------------------------------------------------
+# 23.1 Introduction
+
+goal of model is to provide simple low-dimensional summary of dataset
+
+in this book use models to partition data into patterns and residuals
+strong patterns will hide subtler trends, so use models to peel back layers of
+  structure as explore a dataset
+  
+but first start with understanding of basics of how models work
+
+2 parts to a model:
+- first, define a family of models that express precise, but generic pattern
+  that want to capture
+  - ex. straight line or quadratic curve
+  - express model family as an equation
+- next, generate fitted model by finding model from family that is closest to
+  your data
+  - takes generic model family and makes it specific
+  
+a fitted model is just closest model from family of models
+- implies that have the "best" model, according to some criteria
+- doesn't imply that have a good model
+- certainly doesn't imply that model is "true"
+
+*"All models are wrong, but some are useful."* - George Box
+
+only question of interest - is the model illuminating and useful?
+
+goal of a model not to uncover truth, but find simple approximation that is
+  still useful
+  
+# 23.1.1 Prerequisites
+
+use modelr package - wraps around base R modelling functions, work with pipe
+```{r}
+library(tidyverse)
+
+library(modelr)
+options(na.action = na.warn)
+```
+
+
+--------------------------------------------------------------------------------
+# 23.2 A simple model
+
+sim1 dataset has two simulated variables, x and y
+```{r}
+ggplot(sim1, aes(x, y)) + 
+  geom_point()
+```
+
+this relationship looks linear! so what do linear family of models look like?
+- randomly generate a few and overlay on the data
+```{r}
+# randomly generate 250 intercepts and slopes
+models <- tibble(
+  a1 = runif(250, -20, 40),
+  a2 = runif(250, -5, 5)
+)
+
+# plot these randomly generated intercepts and slopes over actual sim1 dataset
+ggplot(sim1, aes(x, y)) + 
+  geom_abline(aes(intercept = a1, slope = a2), data = models, alpha = 1/4) +
+  geom_point() 
+```
+
+most of these models are really bad! need to find good models by making precise
+  our intuition that a good model is "close" to the data
+- need to quantify distance between data and a model
+  - then fit model by finding value of a_0 and a_1 that generates model with
+    smallest distance from this data
+    
+easy to start by finding the vertical distance b/ween each point and the model
+- this distance is just difference b/ween prediction (model) and response (data)
+
+to do this, turn model family into R function
+- takes model parameters and data as inputs, givs values predicted by model
+  as output
+```{r}
+model1 <- function(a, data) {
+  a[1] + data$x * a[2]
+}
+
+model1(c(7, 1.5), sim1)
+```
+
+now need to get the cumulative difference between these points over whole model
+- use "root-mean-squared deviation"
+```{r}
+measure_distance <- function(mod, data) {
+  diff <- data$y - model1(mod, data)
+  sqrt(mean(diff ^ 2))
+}
+
+measure_distance(c(7, 1.5), sim1)
+
+# use purr to compute distance for all models defined above
+sim1_dist <- function(a1, a2) {
+  measure_distance(c(a1, a2), sim1)
+}
+
+models <- models %>% 
+  mutate(dist = purrr::map2_dbl(a1, a2, sim1_dist))
+
+models
+```
+
+overlay the 10 best models on to the data
+```{r}
+ggplot(sim1, aes(x, y)) + 
+  geom_point(size = 2, colour = "grey30") + 
+  geom_abline(
+    aes(intercept = a1, slope = a2, colour = -dist), 
+    data = filter(models, rank(dist) <= 10)
+  )
+```
+
+can also think about models as observations - visualize w/ scatterplot of a1 vs a2
+
+## RESUME HERE ##
+
+
+
+
+
+
+
