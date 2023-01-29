@@ -127,12 +127,557 @@ ggplot(sim1, aes(x, y)) +
 ```
 
 can also think about models as observations - visualize w/ scatterplot of a1 vs a2
+```{r}
+# highlight 10 best models
+ggplot(models, aes(a1, a2)) +
+  geom_point(data = filter(models, rank(dist) <= 10), 
+             size = 4, colour = "red") +
+  geom_point(aes(colour = -dist))
+```
 
-## RESUME HERE ##
+grid search to find the best models
+```{r}
+grid <- expand.grid(
+  a1 = seq(-5, 20, length = 25),
+  a2 = seq(1, 3, length = 25)
+  ) %>% 
+  mutate(dist = purrr::map2_dbl(a1, a2, sim1_dist))
+
+grid %>% 
+  ggplot(aes(a1, a2)) +
+  geom_point(data = filter(grid, rank(dist) <= 10), size = 4, colour = "red") +
+  geom_point(aes(colour = -dist)) 
+```
+
+these 10 best models look pretty good overlayed on original data!
+```{r}
+ggplot(sim1, aes(x, y)) + 
+  geom_point(size = 2, colour = "grey30") + 
+  geom_abline(
+    aes(intercept = a1, slope = a2, colour = -dist), 
+    data = filter(grid, rank(dist) <= 10)
+  )
+```
+
+Newton-Raphson search approach for finding best model
+- like skiing, ski down slope until can't get any lower
+```{r}
+best <- optim(c(0, 0), measure_distance, data = sim1)
+best$par
+
+ggplot(sim1, aes(x, y)) + 
+  geom_point(size = 2, colour = "grey30") + 
+  geom_abline(intercept = best$par[1], slope = best$par[2])
+```
+
+this approach will work for any family of models
+
+R has tool specifically for fitting linear models: lm()
+- lm specifies model family using formulas
+```{r}
+sim1_mod <- lm(y ~ x, data = sim1)
+coef(sim1_mod)
+
+# exact same values we got with optim()!!!!
+# lm doesn't use optim() approach, but is faster and better
+```
+
+## 23.2.1 Exercises
+
+1. One downside of the linear model is that it is sensitive to unusual values 
+  because the distance incorporates a squared term. Fit a linear model to the 
+  simulated data below, and visualise the results. Rerun a few times to generate 
+  different simulated datasets. What do you notice about the model?
+*I mean it does pretty well! But if there's crazy outliers won't do well with them*
+```{r}
+sim1a <- tibble(
+  x = rep(1:10, each = 3),
+  y = x * 1.5 + 6 + rt(length(x), df = 2)
+)
+
+sim1a_mod <- lm(y ~ x, data = sim1a)
+model_values <- coef(sim1a_mod)
+
+ggplot(sim1a, aes(x, y)) + 
+  geom_point(size = 2, colour = "grey30") + 
+  geom_abline(intercept = model_values[1], slope = model_values[2], color = "blue")
+```
+
+2. One way to make linear models more robust is to use a different distance 
+  measure. For example, instead of root-mean-squared distance, you could use 
+  mean-absolute distance:
+*Plotted both on top of each other below - they look pretty damn similar!*
+```{r}
+# here function for mean-absolute distance
+measure_distance <- function(mod, data) {
+  diff <- data$y - model1(mod, data)
+  mean(abs(diff))
+}
 
 
+best <- optim(c(0, 0), measure_distance, data = sim1a)
+best$par
+
+# here see both optim (red) and lm (blue) overlayed on top of eachother
+ggplot(sim1, aes(x, y)) + 
+  geom_point(size = 2, colour = "grey30") + 
+  geom_abline(intercept = best$par[1], slope = best$par[2], color = "red") +
+  geom_abline(intercept = model_values[1], slope = model_values[2], color = "blue")
+# they are super close!
+```
+
+Use optim() to fit this model to the simulated data above and compare it to the 
+  linear model.
+
+3. One challenge with performing numerical optimisation is that it’s only 
+  guaranteed to find one local optimum. What’s the problem with optimising a 
+  three parameter model like this?
+*Could imagine that would be jack of all trades master of none approach*
+```{r}
+model1 <- function(a, data) {
+  a[1] + data$x * a[2] + a[3]
+}
+```
 
 
+--------------------------------------------------------------------------------
+# 23.3 Visualizing models
+
+here focus on trying to understand model by looking at its predictions
+- also useful to see what model doesn't capture - so-called residuals which are
+  left after subtracting predictions from data
+- residuals powerful b/c allow us to remove striking patterns to study subtler
+  trends that remain
+  
+## 23.3.1 Predictions
+
+start be generating evenly spaced grid of values covering region where data lies
+```{r}
+# do this with modelr::data_grid()
+
+grid <- sim1 %>% 
+  data_grid(x) 
+
+grid
+```
+
+then add predictions, takes data frame and model. adds predictions from model
+  to new column in the data frame we've created
+```{r}
+grid <- grid %>% 
+  add_predictions(sim1_mod) 
+grid
+```
+
+then plot the predictions, lots of work compared to just using geom_abline()
+- but that only works for linear models
+- this approach works for any model in R
+```{r}
+ggplot(sim1, aes(x)) +
+  geom_point(aes(y = y)) +
+  geom_line(aes(y = pred), data = grid, colour = "red", size = 1)
+```
+
+## 23.3.2 Residuals
+
+flip-side of predictions are residuals
+- predictions tell what model has missed
+- residuals just distances between observed and predicted values
+
+use add_residuals to data, works much like add_predictions
+- but of course need the actual data b/c this is how residuals are computed
+```{r}
+sim1 <- sim1 %>% 
+  add_residuals(sim1_mod)
+sim1
+```
+
+can draw a frequency polygon to help understand spread of residuals
+```{r}
+ggplot(sim1, aes(resid)) + 
+  geom_freqpoly(binwidth = 0.5)
+```
+
+often will want to recreate plots using residuals instead of og predictor
+```{r}
+ggplot(sim1, aes(x, resid)) + 
+  geom_ref_line(h = 0) +
+  geom_point() 
+```
+
+if residual graph looks like random noise that means model has done good job of
+  capturing patterns in the dataset
+  
+## 23.3.3 Exercises
+
+1. Instead of using lm() to fit a straight line, you can use loess() to fit a 
+  smooth curve. Repeat the process of model fitting, grid generation, predictions, 
+  and visualisation on sim1 using loess() instead of lm(). How does the result 
+  compare to geom_smooth()?
+*Result is a bit 
+```{r}
+sim1_loess <- loess(y ~ x, data = sim1)
+
+grid <- sim1 %>% 
+  data_grid(x)
+
+grid <- grid %>% 
+  add_predictions(sim1_loess) 
+
+ggplot(sim1, aes(x)) +
+  geom_point(aes(y = y)) +
+  geom_line(aes(y = pred), data = grid, colour = "red", size = 1)
+```
+
+2. add_predictions() is paired with gather_predictions() and spread_predictions(). 
+  How do these three functions differ?
+*add_prediction adds single new column of predictions to data frame*
+*spread_prediction can work on multiple models at the same time, adds preds from each*
+*gather_prediction adds two columns, one for model name and the other for prediction*
+
+3. What does geom_ref_line() do? What package does it come from? Why is displaying 
+  a reference line in plots showing residuals useful and important?
+*ggplot2, displays reference line with residuals - important to show what model didnt cover*
+
+4. Why might you want to look at a frequency polygon of absolute residuals? 
+  What are the pros and cons compared to looking at the raw residuals?
+*just guessing that would be easier to interprate, maybe highs and lows behave similarly?*
+*but would mask any potential effects of skewed residuals*
 
 
+--------------------------------------------------------------------------------
+# 23.4 Formulas and model families
+
+majority of modelling functions use standard conversion from formulas to functions
+
+ex.
+y ~ x translated to y = a_1 + a_2 * x
+
+see what R does by using model_matrix() function
+```{r}
+df <- tribble(
+  ~y, ~x1, ~x2,
+  4, 2, 5,
+  5, 1, 6
+)
+model_matrix(df, y ~ x1)
+```
+
+## 23.4.1 Categorical variables
+
+generating prediction is complicated when predictor is categorical
+ex. sex - R converts to binary, 1 or 0
+```{r}
+df <- tribble(
+  ~ sex, ~ response,
+  "male", 1,
+  "female", 2,
+  "male", 1
+)
+model_matrix(df, response ~ sex)
+```
+
+work through example with sim2 dataset
+```{r}
+ggplot(sim2) + 
+  geom_point(aes(x, y))
+
+# fit a model to it and generate predictions
+mod2 <- lm(y ~ x, data = sim2)
+
+grid <- sim2 %>% 
+  data_grid(x) %>% 
+  add_predictions(mod2)
+grid
+```
+
+effectively, model with categorical x will predict mean value for each category
+```{r}
+ggplot(sim2, aes(x)) + 
+  geom_point(aes(y = y)) +
+  geom_point(data = grid, aes(y = pred), colour = "red", size = 4)
+```
+
+can't make predictions about levels didn't observe
+
+## 23.4.2 Interactions (continuous and categorical)
+
+what happens when combine continuous and categorical variable?
+- sim3 has both, visualize with simple plot
+```{r}
+ggplot(sim3, aes(x1, y)) + 
+  geom_point(aes(colour = x2))
+```
+
+two possible models could fit to this data
+```{r}
+mod1 <- lm(y ~ x1 + x2, data = sim3)
+mod2 <- lm(y ~ x1 * x2, data = sim3)
+```
+
+*when add variables with +, model will estimate each effect independent of others*
+*both interaction and individual are included in model when use *
+
+to visualize these models, need two new tricks:
+- have 2 predictors, so need to give data_grid() both variables.
+  - finds all unique values of x1 and x2, generates all combos
+- to generate predictions from both models simulatenously, use gather_predictions()
+  - adds each prediction as a row, spread_predictions adds as new column
+```{r}
+grid <- sim3 %>% 
+  data_grid(x1, x2) %>% 
+  gather_predictions(mod1, mod2)
+grid
+
+# visualize results for both models on one plot
+ggplot(sim3, aes(x1, y, colour = x2)) + 
+  geom_point() + 
+  geom_line(data = grid, aes(y = pred)) + 
+  facet_wrap(~ model)
+```
+
+*model that uses + has same slope for each line, just different intercepts*
+*model that uses interaction has different slope and intercept for each line*
+
+which model is better for this data?
+- can take look at residuals
+```{r}
+sim3 <- sim3 %>% 
+  gather_residuals(mod1, mod2)
+
+ggplot(sim3, aes(x1, resid, colour = x2)) + 
+  geom_point() + 
+  facet_grid(model ~ x2)
+```
+
+big takeaway here is that mod2 has evenly distributed residuals in each group
+- BUT! mod1 has clearly missed some patterns (unevenly distributed residuals) in
+  b, c, and d.
+
+*here we're interested in a qualitative assessment of whether or not model captures*
+  *pattern we're interested in*
+
+## 23.4.3 Interactions (two continuous)
+
+equivalent model for two continuous variables
+```{r}
+mod1 <- lm(y ~ x1 + x2, data = sim4)
+mod2 <- lm(y ~ x1 * x2, data = sim4)
+
+grid <- sim4 %>% 
+  data_grid(
+    x1 = seq_range(x1, 5), 
+    x2 = seq_range(x2, 5) 
+  ) %>% 
+  gather_predictions(mod1, mod2)
+grid
+```
+
+used seq_range() within data_grid()
+
+try and visualise the model. with two continuous predictors, imagine model
+  like 3d surface, use geom_tile()
+```{r}
+ggplot(grid, aes(x1, x2)) + 
+  geom_tile(aes(fill = pred)) + 
+  facet_wrap(~ model)
+```
+
+can be hard to interprate these graphs, look at slices from side:
+```{r}
+ggplot(grid, aes(x1, pred, colour = x2, group = x2)) + 
+  geom_line() +
+  facet_wrap(~ model)
+
+ggplot(grid, aes(x2, pred, colour = x1, group = x1)) + 
+  geom_line() +
+  facet_wrap(~ model)
+```
+
+shows that interaction b/ween two continuous variables works basically same
+  as for a categorical and a continuous variable
+
+even with just two continuous variables, coming up with good visualizations are 
+  hard!
+
+## 23.4.4 Transformations
+
+can also perform transformations inside model formula
+
+if get confused about what model is doing, can always use model_matrix() to see
+  exactly what equation lm() is fitting
+```{r}
+df <- tribble(
+  ~y, ~x,
+   1,  1,
+   2,  2, 
+   3,  3
+)
+
+model_matrix(df, y ~ x^2 + x)
+
+model_matrix(df, y ~ I(x^2) + x)
+```
+
+transformations useful b/c can use them to approximate non-linear functions
+- Taylor's theorem - can approximate any smooth function with infinite sum of
+  polynomials
+- use R's helper function: poly()
+- or lol actually use splines to avoid polynomials shooting off to +- infinity
+```{r}
+model_matrix(df, y ~ poly(x, 2))
+
+library(splines)
+model_matrix(df, y ~ ns(x, 2))
+
+# here try and approximate non-linear function
+sim5 <- tibble(
+  x = seq(0, 3.5 * pi, length = 50),
+  y = 4 * sin(x) + rnorm(length(x))
+)
+
+ggplot(sim5, aes(x, y)) +
+  geom_point()
+```
+
+fit five models to this data
+```{r}
+mod1 <- lm(y ~ ns(x, 1), data = sim5)
+mod2 <- lm(y ~ ns(x, 2), data = sim5)
+mod3 <- lm(y ~ ns(x, 3), data = sim5)
+mod4 <- lm(y ~ ns(x, 4), data = sim5)
+mod5 <- lm(y ~ ns(x, 5), data = sim5)
+
+grid <- sim5 %>% 
+  data_grid(x = seq_range(x, n = 50, expand = 0.1)) %>% 
+  gather_predictions(mod1, mod2, mod3, mod4, mod5, .pred = "y")
+
+ggplot(sim5, aes(x, y)) + 
+  geom_point() +
+  geom_line(data = grid, colour = "red") +
+  facet_wrap(~ model)
+```
+
+downside of approximating a function with a polynomial is that extrapolation
+  outside of range of data is clearly bad
+- but that's an issue with every model
+- whenever start extrapolating outside range of data, model will be bad
+- have to rely on theory and science!
+
+## 23.4.5 Exercises
+
+1. What happens if you repeat the analysis of sim2 using a model without an 
+  intercept. What happens to the model equation? What happens to the predictions?
+*predictions are exact same*
+```{r}
+# to run model without intercept, add -1
+
+mod2a <- lm(y ~ x - 1, data = sim2)
+coef(mod2a)
+
+mod2 <- lm(y ~ x, data = sim2)
+coef(mod2)
+
+grid <- sim2 %>%
+  data_grid(x) %>%
+  spread_predictions(mod2, mod2a)
+grid
+```
+  
+2. Use model_matrix() to explore the equations generated for the models I fit 
+  to sim3 and sim4. Why is * a good shorthand for interaction?
+*from answers*
+```{r}
+x3 <- model_matrix(y ~ x1 * x2, data = sim3)
+
+# variables x1:x2b is product of x1 and x2b
+all(x3[["x1:x2b"]] == (x3[["x1"]] * x3[["x2b"]]))
+
+# where both x1 and x2 are continuous, model_matrix() creates vars x1, x2, x1:x2
+x4 <- model_matrix(y ~ x1 * x2, data = sim4)
+x4
+
+# confirm x1:x2 is product of x1 and x2
+all(x4[["x1"]] * x4[["x2"]] == x4[["x1:x2"]])
+
+# asterisk is good shorthand b/c includes terms for x1, x2 and product of x1 and x2
+```
+
+3. Using the basic principles, convert the formulas in the following two models 
+  into functions. (Hint: start by converting the categorical variable into 0-1 
+  variables.)
+*nah, gonna skip this one*
+```{r}
+mod1 <- lm(y ~ x1 + x2, data = sim3)
+mod2 <- lm(y ~ x1 * x2, data = sim3)
+```
+
+4. For sim4, which of mod1 and mod2 is better? I think mod2 does a slightly 
+  better job at removing patterns, but it’s pretty subtle. Can you come up with 
+  a plot to support my claim?
+*honestly the difference is so small here! but perhaps mod2 has fewer residuals*
+```{r}
+mod1 <- lm(y ~ x1 + x2, data = sim4)
+mod2 <- lm(y ~ x1 * x2, data = sim4)
+
+sim4_mods <- gather_residuals(sim4, mod1, mod2)
+
+ggplot(sim4_mods, aes(x = abs(resid), colour = model)) +
+  geom_freqpoly(bindwidth = 0.5) +
+  geom_rug()
+```
+
+
+--------------------------------------------------------------------------------
+# 23.5 Missing values
+
+modelling functions drop any rows that contain missing values
+```{r}
+df <- tribble(
+  ~x, ~y,
+  1, 2.2,
+  2, NA,
+  3, 3.5,
+  4, 8.3,
+  NA, 10
+)
+
+mod <- lm(y ~ x, data = df)
+
+# can always see exactly how many observations used with nobs()
+nobs(mod)
+```
+
+
+--------------------------------------------------------------------------------
+# 23.6 Other model families
+
+linear models also assume residuals have normal distribution
+
+large set of model classes that extend linear model in various ways:
+- generalised linear models
+    - extend linear models to include non-continuous responses (eg. binary data
+      or counts)
+    - they work by defining a distance metric based on statistical idea of
+      likelihood
+- generalised additive models 
+    - extend glms to incorporate arbitrary smooth functions
+- penalised linear models
+    - add penalty term to distance that penalises complex models
+- robust linear models
+    - tweak distance to downweight points that are very far away
+    - less sensitive to presence of outliers, at cost of being not quite as good
+      when there are no outliers
+- trees
+    - attack problem in different way than linear models
+    - fit piece-wise constant model, splitting data into progressively smaller
+      and smaller pieces
+    - trees aren't terribly effective by themselves, but v powerful when used in
+      aggregate by models like random forests, or gradient boosting machines
+
+all of these models work similarly from programming perspective. once have mastered
+linear models, should find easy to master mechanics of other model classes
+
+being skilled modeller is mixture of some good general principles and having
+big toolbox of techniques
 
