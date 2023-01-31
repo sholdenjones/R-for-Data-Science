@@ -1,0 +1,25 @@
+---
+title: "Ch26_lab"
+author: "Holden Jones"
+date: '2023-01-31'
+output: html_document
+---
+
+# Introduction
+
+so far, have learned tools to get data into R, tidy it into form convenient for
+  analysis, and then understand data through transformation, visualization and
+  modelling. but, doesn't matter how great analysis is unless can explain it to
+  others - need to communicate results!
+
+communication is theme of following four chapters
+- R Markdown - learn about tool for integrating prose, code and results
+  - notebook mode for analyst to analyst communication, report model for analyst
+    to decision maker communication. can even use same document for both
+- Graphics for communication - learn how to take exploratory graphics and turn
+  them into expository graphics, help newcomer to analysis understand what's
+  going on as quickly and easily as possible
+- R Markdown formats - learn a little about many other varieties of
+  outputs can produce using R Markdown - dashboards, websites, books
+- R Markdown workflow - learn about "analysis notebook", how to systematically
+  record successes and failures so that can learn from them

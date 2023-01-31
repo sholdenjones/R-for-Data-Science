@@ -1,0 +1,558 @@
+---
+title: "Ch25_lab"
+author: "Holden Jones"
+date: '2023-01-31'
+output: html_document
+---
+
+# Many models
+
+
+--------------------------------------------------------------------------------
+# 25.1 Introduction
+
+learn 3 powerful ideas to help work with large numbers of models
+- using many simple models to better understand complex datasets
+- using list-columns to store arbitrary data structures in data frame
+  - ex. have column containing linear models
+- using broom package to turn models into tidy data
+  - powerful technique b/c once have tidy data, can apply all techniques
+    learned earlier in this book
+    
+using real life example about life expectancy
+
+following sections dive into more detail about individual techniques
+- list-columns - list-column data structure, why valid to put lists into 
+  data frames
+- creating list-columns - learn 3 main ways in which create list-columns
+- simplifying list-columns - learn how to convert list-columns back to regular
+  atomic vectors so can work with them more easily
+- making tidy data with broom - learn full set of tools provided by broom, how
+  to apply to other types of data structure
+  
+## 25.1.1 Prerequisites
+
+```{r}
+library(modelr)
+library(tidyverse)
+```
+
+
+--------------------------------------------------------------------------------
+# 25.2 gapminder
+
+from Hans Rosling - Swedish doctor and statistician
+
+```{r}
+library(gapminder)
+gapminder
+```
+
+focus on: how does lifeExp change over year for each country
+```{r}
+gapminder %>%
+  ggplot(aes(year, lifeExp, group = country)) +
+  geom_line(alpha = 1/3)
+# see that generally life expectancy increases over time, but some exceptions!
+```
+
+think like from last chapter - strong signal of overall linear growth makes hard
+  to see subtler trends
+- model captures steady growth over time, and residuals will show what's left
+```{r}
+# know how to do this for one country
+nz <- filter(gapminder, country == "New Zealand")
+nz %>% 
+  ggplot(aes(year, lifeExp)) + 
+  geom_line() + 
+  ggtitle("Full data = ")
+
+nz_mod <- lm(lifeExp ~ year, data = nz)
+nz %>% 
+  add_predictions(nz_mod) %>%
+  ggplot(aes(year, pred)) + 
+  geom_line() + 
+  ggtitle("Linear trend + ")
+
+nz %>% 
+  add_residuals(nz_mod) %>% 
+  ggplot(aes(year, resid)) + 
+  geom_hline(yintercept = 0, colour = "white", size = 3) + 
+  geom_line() + 
+  ggtitle("Remaining pattern")
+```
+
+how to easily fit that model to every country?
+
+## 25.2.1 Nested data
+
+extract out common code with a function and repeat using map function from purrr
+- to repeat an action for each country (a subset of rows), need a nested data frame
+```{r}
+by_country <- gapminder %>% 
+  group_by(country, continent) %>% 
+  nest()
+
+by_country
+```
+
+this creates data frame with one row per group (per country) with unusual column
+  data! data is a list of data frames (tibbles to be precise)
+```{r}
+# pluck out single entry in data to look at it
+by_country$data[[1]]
+```
+
+## 25.2.2 List-columns
+
+now that have nested data frame, in good position to fit some models
+```{r}
+country_model <- function(df) {
+  lm(lifeExp ~ year, data = df)
+}
+
+# and want to apply it to every data frame. apply country_model to each element
+models <- map(by_country$data, country_model)
+```
+
+better to store list of models as column in by_country data frame
+- storing related objects in columns key value of data frames
+- instead of creating new object in global env, create new variable in by_country
+  - a job for mutate()!
+```{r}
+by_country <- by_country %>% 
+  mutate(model = map(data, country_model))
+by_country
+```
+
+makes it easier to sort and filter
+```{r}
+by_country %>% 
+  filter(continent == "Europe")
+```
+
+## 25.2.3 Unnesting
+
+now have 142 dataframes and 142 models, to compute residuals call add_residuals()
+  with each model-data pair
+```{r}
+by_country <- by_country %>% 
+  mutate(
+    resids = map2(data, model, add_residuals)
+  )
+by_country
+
+# turn list of data frames back into regular data frame, use unnest()
+resids <- unnest(by_country, resids)
+resids
+```
+
+now have a regular data frame, and can plot residuals
+```{r}
+resids %>%
+  ggplot(aes(year, resid)) +
+  geom_line(aes(group = country)) +
+  geom_smooth()
+
+# can facet by continent
+resids %>%
+  ggplot(aes(year, resid)) +
+  geom_line(aes(group = country)) +
+  geom_smooth() +
+  facet_wrap(~continent)
+
+# lots of residuals in Africa, Asia, rest of world looks pretty good
+```
+
+## 25.2.4 Model quality
+
+Instead of looking at residuals from model, could look at some general measures of
+  model quality
+```{r}
+library(broom)
+
+glance(nz_mod)
+
+# use mutate and unnest to create data frame with row with glance for each country
+by_country %>%
+  mutate(glance = map(model, glance)) %>%
+  unnest(glance)
+
+# don't want all the list columns
+glance <- by_country %>% 
+  mutate(glance = map(model, broom::glance)) %>% 
+  unnest(glance, .drop = TRUE)
+
+glance
+
+# look for models that don't fit well
+glance %>% 
+  arrange(r.squared)
+
+# worst models appear to be in Africa, check with plot
+glance %>% 
+  ggplot(aes(continent, r.squared)) + 
+    geom_jitter(width = 0.5)
+```
+
+pull out countries with particularly bad R2 and plot data
+```{r}
+bad_fit <- filter(glance, r.squared < 0.25)
+
+gapminder %>% 
+  semi_join(bad_fit, by = "country") %>% 
+  ggplot(aes(year, lifeExp, colour = country)) +
+    geom_line()
+# see two main effects - Rwandan genocide, HIV/AIDS epidemic
+```
+
+## 25.2.5 Exercises
+
+1. A linear trend seems to be slightly too simple for the overall trend. Can you 
+  do better with a quadratic polynomial? How can you interpret the coefficients 
+  of the quadratic? (Hint you might want to transform year so that it has mean 
+  zero.)
+*from answers*
+```{r}
+lifeExp ~ poly(year, 2)
+
+country_model <- function(df) {
+  lm(lifeExp ~ poly(year - median(year), 2), data = df)
+}
+
+by_country <- gapminder %>%
+  group_by(country, continent) %>%
+  nest()
+
+by_country <- by_country %>%
+  mutate(model = map(data, country_model))
+
+by_country <- by_country %>%
+  mutate(
+    resids = map2(data, model, add_residuals)
+  )
+by_country
+
+unnest(by_country, resids) %>%
+  ggplot(aes(year, resid)) +
+  geom_line(aes(group = country), alpha = 1 / 3) +
+  geom_smooth(se = FALSE)
+
+by_country %>%
+  mutate(glance = map(model, broom::glance)) %>%
+  unnest(glance, .drop = TRUE) %>%
+  ggplot(aes(continent, r.squared)) +
+  geom_jitter(width = 0.5)
+```
+
+2. Explore other methods for visualising the distribution of R2 per continent. 
+  You might want to try the ggbeeswarm package, which provides similar methods 
+  for avoiding overlaps as jitter, but uses deterministic methods.
+*from answers*
+```{r}
+library("ggbeeswarm")
+
+by_country %>%
+  mutate(glance = map(model, broom::glance)) %>%
+  unnest(glance, .drop = TRUE) %>%
+  ggplot(aes(continent, r.squared)) +
+  geom_beeswarm()
+```
+
+3. To create the last plot (showing the data for the countries with the worst 
+  model fits), we needed two steps: we created a data frame with one row per 
+  country and then semi-joined it to the original dataset. It’s possible to avoid 
+  this join if we use unnest() instead of unnest(.drop = TRUE). How?
+*from answers*
+```{r}
+gapminder %>%
+  group_by(country, continent) %>%
+  nest() %>%
+  mutate(model = map(data, ~lm(lifeExp ~ year, .))) %>%
+  mutate(glance = map(model, broom::glance)) %>%
+  unnest(glance) %>%
+  unnest(data) %>%
+  filter(r.squared < 0.25) %>%
+  ggplot(aes(year, lifeExp)) +
+  geom_line(aes(color = country))
+```
+
+
+--------------------------------------------------------------------------------
+# 25.3 List-columns
+
+dive back into some of the details for managing many models, after seeing workflow
+
+```{r}
+# base R doesn't make it easy to create list-columns
+data.frame(x = list(1:3, 3:5))
+
+# can prevent data.frame from doing this with I(), but result doesn't print well
+data.frame(
+  x = I(list(1:3, 3:5)), 
+  y = c("1, 2", "3, 4, 5")
+)
+```
+
+tibble() is better
+```{r}
+tibble(
+  x = list(1:3, 3:5), 
+  y = c("1, 2", "3, 4, 5")
+)
+
+# also easier with tribble(), automatically knows that need a list:
+tribble(
+   ~x, ~y,
+  1:3, "1, 2",
+  3:5, "3, 4, 5"
+)
+```
+
+effective list-column pipeline:
+- create list-column using one of nest(), summarise() + list(), or mutate() + 
+  a map function
+- create other intermediate list-columns by transforming existing list columns
+  with map(), map2(), or pmap()
+- simplify list-column back down to data frame or atomic vector
+
+
+--------------------------------------------------------------------------------
+# 25.4 Creating list-columns
+
+typically won't create list-columns with tibble(). Instead, create from regular
+  columns, using one of three methods:
+- with tidyr::best() - to convert grouped data frame into nested data frame where
+  have list-column of data frames
+- with mutate() - and vectorised functions that return a list
+- with summarise() - and summary functions that return multiple results
+- alternatively, could create them from a named list, using tibble::enframe()
+
+generally, make sure list-columns are homogenous - each element should contain
+  same type of thing
+
+## 25.4.1 With nesting
+
+nest() creates a nested data frame, which is data frame with a list-column of 
+  data frames
+- each row is a meta observation - other columns give variables that define
+  observation
+  
+2 ways to use nest
+- have seen how to use it with grouped data frame
+  - nest keeps grouping columns as is, and bundles everything else into list-col
+- can also use it on ungrouped data frame, specifying which columns want to nest
+```{r}
+# nest with a grouped data frame - keeps grouping columns, bundles all else
+gapminder %>% 
+  group_by(country, continent) %>% 
+  nest()
+
+# nest with ungrouped data frame - specify what to nest
+gapminder %>% 
+  nest(data = c(year:gdpPercap))
+```
+
+## 25.4.2 From vectorised functions
+
+some useful functions take atomic vector and return a list
+```{r}
+df <- tribble(
+  ~x1,
+  "a,b,c", 
+  "d,e,f,g"
+) 
+
+df %>% 
+  mutate(x2 = stringr::str_split(x1, ","))
+```
+
+unnest knows how to handle these lists of vectors
+```{r}
+df %>% 
+  mutate(x2 = stringr::str_split(x1, ",")) %>% 
+  unnest(x2)
+```
+
+## 25.4.3 From multivalued summaries
+
+one restriction of summarise() is that only works with summary functions that
+  return single value
+- means can't use it with functions like quantile() that return vector of arbitrary
+  length
+```{r}
+mtcars %>% 
+  group_by(cyl) %>% 
+  summarise(q = quantile(mpg))
+
+# can wrap result in list! obeys contract of summarise
+mtcars %>% 
+  group_by(cyl) %>% 
+  summarise(q = list(quantile(mpg)))
+
+# to make useful results with unnest, also need capture probabilities
+probs <- c(0.01, 0.25, 0.5, 0.75, 0.99)
+mtcars %>% 
+  group_by(cyl) %>% 
+  summarise(p = list(probs), q = list(quantile(mpg, probs))) %>% 
+  unnest(c(p, q))
+```
+
+## 25.4.4 From a named list
+
+data frames with list-columns provide solution to common problem
+  - what to do if want to iterate over both contents of list and its elements?
+```{r}
+x <- list(
+  a = 1:5,
+  b = 3:4, 
+  c = 5:6
+) 
+
+df <- enframe(x)
+df
+
+# if want to iterate over names and values in parallel, can use map2()
+df %>% 
+  mutate(
+    smry = map2_chr(name, value, ~ stringr::str_c(.x, ": ", .y[1]))
+  )
+```
+
+## 25.4.5 Exercises
+
+1. List all the functions that you can think of that take a atomic vector and 
+  return a list.
+*many functions in stringr, map() function*
+
+2. Brainstorm useful summary functions that, like quantile(), return multiple 
+  values.
+*range, fivenum, I think glance, no?*
+
+3. What’s missing in the following data frame? How does quantile() return that 
+  missing piece? Why isn’t that helpful here?
+*the particular quantiles of values are missing (ie 0, 25, 50, 75, 100 %)
+```{r}
+mtcars %>% 
+  group_by(cyl) %>% 
+  summarise(q = list(quantile(mpg))) %>% 
+  unnest(q)
+
+quantile(mtcars$mpg)
+
+# since unnest function drops names of vector, not useful here
+```
+
+4. What does this code do? Why might might it be useful?
+*not sure!*
+```{r}
+mtcars %>% 
+  group_by(cyl) %>% 
+  summarise_all(list(list))
+```
+
+
+--------------------------------------------------------------------------------
+#25.5 Simplifying list-columns
+
+to apply techniques of data manipulation and visualization learned in this book,
+need to simplify list-column back to regular column or set of columns
+- technique use to collapse down to simpler structure depends on whether want
+  single value per element, or multiple values
+  - if want single value, use mutate(), with map_lgl(), map_int(), map_dbl() and
+    map_chr() to create atomic vector
+  - if want many values, use unnest() to convert list-columns back to regular
+    columns, repeating rows as many times as necessary
+    
+## 25.5.1 List to vector
+
+if can reduce list column to atomic vector then will be regular column
+- ex can always summarise object with type and length, this code will work
+  regardless of what sort of list-column you have
+```{r}
+df <- tribble(
+  ~x,
+  letters[1:5],
+  1:3,
+  runif(5)
+)
+  
+df %>% mutate(
+  type = map_chr(x, typeof),
+  length = map_int(x, length)
+)
+
+# also don't forget about map_*() shortcuts
+df <- tribble(
+  ~x,
+  list(a = 1, b = 2),
+  list(a = 2, c = 4)
+)
+
+df %>% mutate(
+  a = map_dbl(x, "a"),
+  b = map_dbl(x, "b", .null = NA_real_)
+)
+```
+
+## 25.5.2 Unnesting
+
+unnest() works by repeating regular columns once for each element of list-column
+```{r}
+tibble(x = 1:2, y = list(1:4, 1)) %>% unnest(y)
+
+# means cant simultaneously unnest two columns that contain different # of elements
+
+# Ok, because y and z have the same number of elements in
+# every row
+df1 <- tribble(
+  ~x, ~y,           ~z,
+   1, c("a", "b"), 1:2,
+   2, "c",           3
+)
+df1
+
+df1 %>% unnest(c(y, z))
+
+# Doesn't work because y and z have different number of elements
+df2 <- tribble(
+  ~x, ~y,           ~z,
+   1, "a",         1:2,  
+   2, c("b", "c"),   3
+)
+df2
+
+df2 %>% unnest(c(y, z))
+```
+
+same principle applies when unnesting list-columns or data frames
+- can unnest multiple list-cols as long as all data frames in each row
+  have same number of rows
+  
+## 25.5.3 Exercises
+
+1. Why might the lengths() function be useful for creating atomic vector columns 
+  from list-columns?
+*important to know if all elements have same length for list-columns!*
+
+2. List the most common types of vector found in a data frame. What makes lists 
+  different?
+*logical, numeric, integer, character, factor*
+*all of common types of vectors in data frames are atomic. lsits are not atomic*
+
+
+--------------------------------------------------------------------------------
+# 25.6 Making tidy data with broom
+
+broom package provides three general tools for turning models into tidy data frames
+- glance(model) - returns a row for each model. each column gives a model summary,
+  either a measure of model quality, or complexity, or both
+- tidy(model) - returns row for each coefficient in the model. each column gives
+  information about estimate or variability
+- augment(model, data) - returns a row for each row in data, adding extra values
+  like residuals, influence statistics
+
+
+
+
+
