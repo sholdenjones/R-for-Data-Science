@@ -1,0 +1,102 @@
+---
+title: "Ch27_lab"
+author: "Holden Jones"
+date: '2023-01-31'
+output: html_document
+---
+
+# R Markdown
+
+
+--------------------------------------------------------------------------------
+# 27.1 Introduction
+
+R Markdown provides unified framework for data science
+combines code, results, and prose commentary
+
+designed to be used in 3 ways
+- communicating to decision makers, focus on conclusions not code
+- collaborating with other data scientists (including future Holden!) who
+  are interested in both conclusions, and how reached them (code)
+- as an environment in which to do data science, modern day lab notebook to 
+  capture what did, and what thinking
+  
+## 27.1.1 Prerequisites
+
+rmarkdown package is automatically installed with RStudio
+
+
+--------------------------------------------------------------------------------
+# 27.2 R Markdown basics
+
+R Markdown files are plain text files that have extension .Rmd
+
+3 important types of content
+- an optional YAML header surrounded by ---s
+- chunks of R code surrounded by '''
+- text mixed with simple formatting like # heading and _italics_
+
+to produce complete report containing all text, code and results, click "knit"
+- can do this programmatically with rmarkdown::render("1-example.Rmd")
+- displays report in viewer plane, creates self-contained HTML file
+
+## 27.2.1 Exercises
+
+1. Create a new notebook using File > New File > R Notebook. Read the instructions. 
+  Practice running the chunks. Verify that you can modify the code, re-run it, 
+  and see modified output.
+
+2. Create a new R Markdown document with File > New File > R Markdown… Knit it 
+  by clicking the appropriate button. Knit it by using the appropriate keyboard 
+  short cut. Verify that you can modify the input and see the output update.
+
+3. Compare and contrast the R notebook and R markdown files you created above. 
+  How are the outputs similar? How are they different? How are the inputs 
+  similar? How are they different? What happens if you copy the YAML header from 
+  one to the other?
+*R notebook files show output of code chunks inside editor, while hiding console*
+
+4. Create one new R Markdown document for each of the three built-in formats: 
+  HTML, PDF and Word. Knit each of the three documents. How does the output 
+  differ? How does the input differ? (You may need to install LaTeX in order to 
+  build the PDF output — RStudio will prompt you if this is necessary.)
+
+
+--------------------------------------------------------------------------------
+# 27.3 Text formatting with Markdown
+
+prose in .Rmd files is written in Markdown, lightweight set of convetions for
+  formatting plain text files
+- designed to be easy to learn as well
+
+
+## 27.3.1 Exercises
+
+1. Practice what you’ve learned by creating a brief CV. The title should be your 
+  name, and you should include headings for (at least) education or employment. 
+  Each of the sections should include a bulleted list of jobs/degrees. Highlight 
+  the year in bold.
+
+2. Using the R Markdown quick reference, figure out how to:
+- Add a footnote.
+- Add a horizontal rule.
+- Add a block quote.
+
+3. Copy and paste the contents of diamond-sizes.Rmd from
+  https://github.com/hadley/r4ds/tree/master/rmarkdown in to a local R markdown 
+  document. Check that you can run it, then add text after the frequency polygon 
+  that describes its most striking features.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
