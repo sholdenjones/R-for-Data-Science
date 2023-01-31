@@ -87,11 +87,157 @@ prose in .Rmd files is written in Markdown, lightweight set of convetions for
   document. Check that you can run it, then add text after the frequency polygon 
   that describes its most striking features.
 
+*checked the answer key for all of these*
 
 
+--------------------------------------------------------------------------------
+# 27.4 Code chunks
+
+use keyboard shortcut!
+
+to insert code chunks and to run entire code chunks
+
+chunks are like functions - should be relatively self-contained, focussed
+  around a single task
+
+## 27.4.1 Chunk name
+
+can name chunks!
+```{r this is the name}
+library(nycflights13)
+
+swag <- flights
+```
+
+can navigate / find them easier, and will have graphics that are named useful
+
+and can set up networks of cached chunks to avoid re-performing expensive
+  computations on every run - more below
+  
+chunk name setup implies special - will be run automatically once, first
+
+## 27.4.2 Chunk options
+
+lots of options to customise code chunks
+- eval = FALSE - prevents code form being evaluated, good for example code
+- include = FALSE - runs code but doesn't show code or results in final doc
+  use for setup code don't want cluttering report
+- echo = FALSE - prevents code but not results from appearing in finished file
+- message = FALSE prevents messages from appearing in finished file
+- results = 'hide' hides printed output, fig.show = 'hide' hides plots
+- error = TRUE causes render to continue even if code returns error
+
+## 27.4.3 Table
+
+by default, tables are printed as would in console
+- if prefer data displayed with additional formatting, can use knitr::kable
+
+## 27.4.4 Caching
+
+normally each knit of document starts from completely clean slate
+- great for reproducibility, b/c ensures have captured every important computation
+  in code. but can be a pain if some computations take a long time
+- so, use cache = TRUE - will save output of chunk to specially named file on
+  disk
+- on subsequent runs, knitr will check to see if code has changed, if it hasn't
+  will reuse cached results
+  
+good idea to regularly clear out all caches with knitr::clean_cache()
+
+use advice of David Robinson for naming - each chunk named after primary object
+  it creates - makes easier to understand depends on specifications
+  
+## 27.4.5 Global options
+
+as work with knitr, will discover that some of default chunk options don't fit
+  needs and want to change them - can do with knitr::opts_chunk$set() in code
+  chunk
+
+## 27.4.6 Inline code
+
+interesting! ccan also embed R code into R Markdown document, directly into text
+  with 'r'
+doing so means results of code will automatically be inserted into text when
+  document is knit
+
+ex
+We have data about `r nrow(diamonds)` diamonds. Only `r nrow(diamonds) - nrow(smaller)` 
+  are larger than 2.5 carats. The distribution of the remainder is shown below:
+
+in these cases, format() is your friend, helps formatting inline code
+
+## 27.4.7 Exercises
+
+1. Add a section that explores how diamond sizes vary by cut, colour, and clarity. 
+  Assume you’re writing a report for someone who doesn’t know R, and instead of 
+  setting echo = FALSE on each chunk, set a global option.
+
+2. Download diamond-sizes.Rmd from https://github.com/hadley/r4ds/tree/master/rmarkdown. 
+  Add a section that describes the largest 20 diamonds, including a table that 
+  displays their most important attributes.
+
+3. Modify diamonds-sizes.Rmd to use comma() to produce nicely formatted output. 
+  Also include the percentage of diamonds that are larger than 2.5 carats.
+
+4. Set up a network of chunks where d depends on c and b, and both b and c depend 
+  on a. Have each chunk print lubridate::now(), set cache = TRUE, then verify 
+  your understanding of caching.
+
+*copied answers, put in test documents in scripts folder*
 
 
+--------------------------------------------------------------------------------
+# 27.5 Troubleshooting
 
+can be harder to troubleshoot R Markdown documents b/c no longer in interactive
+  R environment, need to learn new tricks
+- first thing should be to try to recreate problem in interactive session
+  restart R, then "Run all chunks"
+- if that doesn't help, must be something different b/ween interactive env and
+  R markdown environment. most common difference is working directory
+```{r}
+getwd()
+```
+
+next, brainstorm all things that might cause bug
+- need to systematically check that are same in R session and R markdown session
+- easiest way to do that is to set error = TRUE on the chunk causing problem, 
+  then use print() and str() to check that settings are as you expect
+
+
+--------------------------------------------------------------------------------
+# 27.6 YAML header
+
+can control many other "whole document" settings by tweaking parameters of 
+YAML header - YAML = yet another markup language
+
+## 27.6.1 Parameters
+
+parameters are useful when want to re-render same report with distinct values
+  for various key inputs
+- use params field
+- good way to specify date/time parameters
+
+can also call rmarkdown::render() with a list of params
+
+## 27.6.2 Bibliographies and citations
+
+Pandoc can automatically generate citations a bibliography in number of styles
+- to use this feature, specify bib file using bibliography field in file's 
+  header. field should contain a path from directory that contains .Rmd file to
+  file that contains bibliography file
+
+
+--------------------------------------------------------------------------------
+# 27.7 Learning more
+
+highly recommend Git and GitHub~~~
+- books they recommend:
+“Happy Git with R”: a user friendly introduction to Git and GitHub from R users, 
+  by Jenny Bryan. The book is freely available online: http://happygitwithr.com
+
+The “Git and GitHub” chapter of R Packages, by Hadley. You can also read it for 
+  free online: http://r-pkgs.had.co.nz/git.html.
 
 
 
