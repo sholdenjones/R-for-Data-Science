@@ -1,0 +1,176 @@
+---
+title: "Ch29_lab"
+author: "Holden Jones"
+date: '2023-02-01'
+output: html_document
+---
+
+# R Markdown formats
+
+
+--------------------------------------------------------------------------------
+# 29.1 Introduction
+
+chapter gives brief overview of other types of output can produce with markdown
+
+2 ways to set output of document
+```{r}
+# permanently, by modifying YAML header
+title: "Viridis Demo"
+output: html_document
+
+# transiently, by calling rmarkdown::render() by hand
+rmarkdown::render("diamond-sizes.Rmd", output_format = "word_document")
+```
+
+R Studio's knit button renders file to first format listed in output field
+- also can render to additional formats via GUI
+
+
+--------------------------------------------------------------------------------
+# 29.2 Output options
+
+each output format associated with an R function
+- to override default parameter values, need to expand output field
+- ex render html_document with floating table of contents
+```{r}
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    
+# can even render to multiple outputs by supplying list of formats
+output:
+  html_document:
+    toc: true
+    toc_float: true
+  pdf_document: default
+```
+
+
+--------------------------------------------------------------------------------
+# 29.3 Documents
+
+number of variations on default html_document output, generating different
+  types of documents
+  
+
+--------------------------------------------------------------------------------
+# 29.4 Notebooks
+
+- html_document focused on communicating with decision makers
+- notebook focused on collaborating with other data scientists
+
+notebook also contains full source code, both contain fully rendered output
+
+interesting - use both html_notebook and github_document outputs
+- html_notebook gives local preview, and file that can share via email
+- github_document creates minimal md file that can check into git, renders nicely
+  on Git
+  
+
+--------------------------------------------------------------------------------
+# 29.5 Presentations
+
+automatically inserting code and results into presentation can save huge
+  amount of time
+- begin new slide at # or ##
+- *** makes new slide without header
+
+comes with three presentation formats built in, with others provided by packages
+
+
+--------------------------------------------------------------------------------
+# 29.6 Dashboards
+
+useful way to communicate large amounts of information visually and quickly
+
+code in Ch29_dashboard creates nice lil dashboard for diamonds
+- but need flexdashboard package, issues with internet in Galapagos
+
+
+--------------------------------------------------------------------------------
+# 29.7 Interactivity
+
+any HTML format can contain interactive components
+
+## 29.7.1 htmlwidgets
+
+ex - leaflet map below, can interact if viewing on web
+rmarkdown inserts static screenshot
+```{r}
+library(leaflet)
+leaflet() %>%
+  setView(174.764, -36.877, zoom = 16) %>% 
+  addTiles() %>%
+  addMarkers(174.764, -36.877, popup = "Maungawhau") 
+```
+
+great thing about widgets is that don't need to know anything about HTML or
+  JavaScript to use them, all details wrapped inside package
+
+## 29.7.2 Shiny
+
+alternative to widgets is using shiny, a package that allows you to create
+  interactivity using R code, not JavaScript
+  
+to call Shiny code from R Markdown doc, add runtime: shiny to header
+```{r}
+title: "Shiny Web App"
+output: html_document
+runtime: shiny
+```
+
+then can use "input" functions to add interactive components to document
+```{r}
+library(shiny)
+
+textInput("name", "What is your name?")
+numericInput("age", "How old are you?", NA, min = 0, max = 150)
+```
+
+can then refer to values as input$name and input$age and code that uses them
+  will be automatically re-run whenever the values change!!!!
+  
+logistical issue - Shiny apps need a Shiny server to be run online
+
+tradeoff - can do anything in a shiny document that can do in R, but it requires
+  someone to be running R
+  
+
+--------------------------------------------------------------------------------
+# 29.8 Websites
+
+with a little additional infrastructure, can use R Markdown to generate complete
+  website
+- put .Rmd files in single directory. index.Rmd will become home page
+- Add a YAML file named _site.yml provides navigation for site
+```{r}
+name: "my-website"
+navbar:
+  title: "My Website"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "Viridis Colors"
+      href: 1-example.html
+    - text: "Terrain Colors"
+      href: 3-inline.html
+```
+
+
+--------------------------------------------------------------------------------
+# 29.9 Other formats
+
+other packages provide even more formats - review if necessary
+
+
+--------------------------------------------------------------------------------
+# 29.10 Learning more
+
+to learn more about effective communication in different formats, following
+  resources
+- academic talks - Leek group guide to giving talks
+- improve presentation skills - Presentation Patterns
+
+

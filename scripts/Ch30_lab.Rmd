@@ -1,0 +1,50 @@
+---
+title: "Ch30_lab"
+author: "Holden Jones"
+date: '2023-02-01'
+output: html_document
+---
+
+# R Markdown workflow
+
+earlier discussed basic workflow for capturing R code
+- work interactively in console
+- capture what works in script editor
+R Markdown blurs these lines a bit, can rapidly iterate within a chunk, when 
+  happy, move on to new chunk
+  
+R Markdown is a great analysis notebook b/c integrates prose and code!
+- records what you did and why, record these things! will forget otherwise!
+- supports rigorous thinking. more likely to come up with strong analysis if
+  record thoughts as you go, and continue to reflect on them. also saves time
+  when eventually write up to share with others
+- helps others understand your work. rare to do data analysis by yourself, often
+  working as part of a team. lab notebook helps share not only what you've done,
+  but why you did it with colleagues or lab mates
+  
+following advice from Hadley's experience, and Colin Purrington's advice on
+  lab notebooks (http://colinpurrington.com/tips/lab-notebooks)
+- ensure each notebook has descriptive title, evocative filename, and first
+  paragraph that briefly describes aims of analysis
+- use YAML header date field to record date started working on notebook
+  use YYYY-MM-DD format so no ambiguity
+- if spend lots of time on analysis and it fails, don't delete! write up brief
+  note about why it failed and leave it in notebook. that will help avoid   
+  going down same dead end when come back to analysis in future
+- generally, better off doing data entry outside of R
+- if discover an error in a data file, never modify it directly, instead write
+  code to correct value, explain why made fix
+- before finish for day, make sure can knit notebook. if using caching, clear 
+  caches. will fix any problems while code is still fresh in mind
+- if want code to be reproducible in long run (should be goal for all projects!)
+  will need to track versions of packages that code uses. use packrat, stores
+  packages in project directory or checkpoint, reinstalls packages available on
+  specified date. quick and dirty hack is to include chunk that runs sessionInfo()
+  - won't allow to easily recreate packages as are today, but at least will know
+  what they were
+- going to create many, many analysis notebooks over course of career. how going
+  to organize them so can find them again in future? Hadley recommends storing
+  them in individual projects, coming up with a good naming scheme
+  
+WOOHOO I'M DONE WITH THE BOOK!
+
